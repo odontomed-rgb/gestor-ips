@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gestor IPS — Delpat Medical</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--od-blue:#0A2FA8;--od-blue-mid:#1845C8;--od-blue-light:#EEF3FF;--od-orange:#E8710A;--od-orange-light:#FFF4EA;--bg:#F4F5F7;--bg-card:#FFFFFF;--bg-hover:#F9FAFB;--text:#1A1A2E;--text-muted:#6B7280;--border:#E5E7EB;--r:10px;--rs:6px;--green:#16A34A;--green-light:#DCFCE7;--red:#EF4444;--red-light:#FEE2E2;--amber:#D97706;--amber-light:#FEF3C7}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:14px;color:var(--text);background:var(--bg);display:flex;height:100vh;overflow:hidden}
+/* SIDEBAR */
+.sidebar{width:220px;min-width:220px;background:var(--od-blue);display:flex;flex-direction:column;overflow-y:auto}
+.brand{padding:1rem;border-bottom:1px solid rgba(255,255,255,.12);display:flex;align-items:center;gap:10px}
+.brand-logo{width:42px;height:42px;border-radius:50%;object-fit:cover;flex-shrink:0;background:var(--od-orange);display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:16px}
+.brand-name{font-size:14px;font-weight:600;color:white;line-height:1.2}
+.brand-sub{font-size:11px;color:rgba(255,255,255,.5);margin-top:1px}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:#EF4444;margin-left:auto;flex-shrink:0;transition:background .3s}
+.sync-dot.ok{background:#22C55E}
+.sync-dot.syncing{background:#F59E0B;animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.nav-sec{font-size:10px;color:rgba(255,255,255,.35);padding:12px 14px 4px;text-transform:uppercase;letter-spacing:.08em}
+.nav-item{display:flex;align-items:center;gap:9px;padding:9px 14px;cursor:pointer;font-size:13px;color:rgba(255,255,255,.7);border:none;background:none;width:100%;text-align:left;border-left:3px solid transparent;transition:background .15s}
+.nav-item:hover{background:rgba(255,255,255,.08);color:white}
+.nav-item.active{background:rgba(255,255,255,.13);color:white;font-weight:500;border-left-color:var(--od-orange)}
+.nav-item i{font-size:16px;flex-shrink:0}
+.nav-sep{height:1px;background:rgba(255,255,255,.1);margin:.5rem 0}
+/* MAIN */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{background:var(--bg-card);border-bottom:1px solid var(--border);padding:.75rem 1.5rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-shrink:0}
+.topbar-title{font-size:16px;font-weight:600;color:var(--od-blue)}
+.topbar-actions{display:flex;gap:8px;align-items:center}
+.content{flex:1;overflow-y:auto;padding:1.25rem 1.5rem}
+.page{display:none}.page.active{display:block}
+/* BUTTONS */
+.btn{padding:7px 14px;border-radius:var(--rs);border:1px solid var(--border);background:white;cursor:pointer;font-size:13px;color:var(--text);display:inline-flex;align-items:center;gap:6px;transition:background .15s}
+.btn:hover{background:var(--bg)}
+.btn.primary{background:var(--od-blue);color:white;border-color:var(--od-blue)}
+.btn.primary:hover{background:var(--od-blue-mid)}
+.btn.orange{background:var(--od-orange);color:white;border-color:var(--od-orange)}
+.btn.danger{color:#9B1C1C;border-color:#F5C6C6}
+.btn.sm{padding:4px 10px;font-size:12px}
+.btn.green{background:var(--green);color:white;border-color:var(--green)}
+/* CARDS */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:1.25rem}
+.card{background:var(--bg-card);border-radius:var(--r);padding:1rem;border:1px solid var(--border)}
+.card.ab{border-left:3px solid var(--od-blue)}
+.card.ao{border-left:3px solid var(--od-orange)}
+.card.ag{border-left:3px solid var(--green)}
+.card .lbl{font-size:11px;color:var(--text-muted);margin-bottom:5px}
+.card .val{font-size:20px;font-weight:600}
+.card .sub{font-size:11px;color:var(--text-muted);margin-top:2px}
+/* TABLE */
+.table-wrap{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:var(--od-blue-light);padding:8px 12px;text-align:left;font-weight:600;font-size:11px;color:var(--od-blue);border-bottom:1px solid var(--border)}
+td{padding:7px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--bg-hover)}
+/* BADGES */
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500}
+.badge.green{background:var(--green-light);color:#14532D}
+.badge.amber{background:var(--amber-light);color:#713F12}
+.badge.red{background:var(--red-light);color:#7F1D1D}
+.badge.gray{background:#F3F4F6;color:#374151}
+.badge.orange{background:var(--od-orange-light);color:#7A3800}
+.badge.blue{background:var(--od-blue-light);color:var(--od-blue)}
+/* FILTERS */
+.filter-bar{display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap;align-items:center}
+.filter-bar select,.filter-bar input{font-size:13px;padding:6px 10px;border-radius:var(--rs);border:1px solid var(--border);background:white;color:var(--text)}
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:flex-start;justify-content:center;padding-top:40px;overflow-y:auto}
+.modal-overlay.open{display:flex}
+.modal{background:white;border-radius:var(--r);padding:1.5rem;width:min(780px,96vw);max-height:88vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.15);margin-bottom:40px}
+.modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;padding-bottom:.75rem;border-bottom:1px solid var(--border)}
+.modal-title{font-size:15px;font-weight:600;color:var(--od-blue)}
+.form-row{margin-bottom:.875rem}
+.form-label{font-size:12px;color:var(--text-muted);margin-bottom:4px;display:block;font-weight:500}
+.form-row input,.form-row select,.form-row textarea{width:100%;font-size:13px;padding:7px 10px;border-radius:var(--rs);border:1px solid var(--border);background:white;color:var(--text)}
+.form-row input:focus,.form-row select:focus,.form-row textarea:focus{outline:none;border-color:var(--od-blue)}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+/* SECTION */
+.sec-title{font-size:11px;font-weight:600;color:var(--od-blue);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.75rem;margin-top:1.25rem}
+.nota-box{background:var(--od-orange-light);border-left:3px solid var(--od-orange);border-radius:0 var(--rs) var(--rs) 0;padding:.625rem .875rem;font-size:12px;color:#7A3800;margin-bottom:1rem;display:flex;gap:6px}
+/* TOAST */
+.toast{position:fixed;bottom:1.5rem;right:1.5rem;background:#1E293B;color:white;padding:.75rem 1.25rem;border-radius:var(--r);font-size:13px;z-index:9999;display:flex;align-items:center;gap:8px;box-shadow:0 4px 20px rgba(0,0,0,.25);transform:translateY(100px);opacity:0;transition:all .3s}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.success{background:#14532D}
+.toast.error{background:#7F1D1D}
+/* ESTADO CAMPOS */
+.campo-ok{color:var(--green);font-weight:600}
+.campo-falta{color:var(--red);font-size:11px;font-style:italic}
+.campo-parcial{color:var(--amber)}
+/* INLINE EDIT */
+.cell-edit{border:none;background:transparent;font-size:13px;color:var(--text);width:100%;cursor:pointer;padding:2px 4px;border-radius:4px}
+.cell-edit:hover{background:var(--od-blue-light)}
+.cell-edit:focus{outline:1px solid var(--od-blue);background:white;cursor:text}
+/* PROMPT BOX */
+.prompt-box{background:#1E293B;border-radius:var(--r);padding:1rem 1.25rem;font-family:monospace;font-size:12px;color:#E2E8F0;white-space:pre-wrap;line-height:1.6;position:relative}
+.copy-btn{position:absolute;top:8px;right:8px}
+/* TIPO CHIP */
+.tipo-urgencia{background:#FEF3C7;color:#92400E;font-size:10px;padding:1px 6px;border-radius:4px;font-weight:600}
+.tipo-emergencia{background:#FEE2E2;color:#7F1D1D;font-size:10px;padding:1px 6px;border-radius:4px;font-weight:600}
+.tipo-otro{background:#F3F4F6;color:#374151;font-size:10px;padding:1px 6px;border-radius:4px;font-weight:600}
+.empty{text-align:center;padding:3rem;color:var(--text-muted)}
+.empty i{font-size:32px;display:block;margin-bottom:8px;opacity:.3;color:var(--od-blue)}
+</style>
+</head>
+<body>
+<div class="toast" id="toast"></div>
+
+<nav class="sidebar">
+  <div class="brand">
+    <img src="odontomed_logo.jpg" alt="Logo" style="width:42px;height:42px;border-radius:50%;object-fit:cover" onerror="this.style.display='none';document.getElementById('brand-fallback').style.display='flex'">
+    <div id="brand-fallback" style="display:none;width:42px;height:42px;border-radius:50%;background:var(--od-orange);align-items:center;justify-content:center;color:white;font-weight:700;font-size:15px;flex-shrink:0">D</div>
+    <div>
+      <div class="brand-name">Delpat Medical</div>
+      <div class="brand-sub">Gestor IPS</div>
+    </div>
+    <div class="sync-dot" id="sync-dot" title="Estado Firebase"></div>
+  </div>
+  <button class="nav-item active" onclick="showPage('dashboard')" id="nav-dashboard"><i class="ti ti-layout-dashboard"></i> Inicio</button>
+  <button class="nav-item" onclick="showPage('contrataciones')" id="nav-contrataciones"><i class="ti ti-file-text"></i> Contrataciones</button>
+  <div class="nav-sep"></div>
+  <div class="nav-sec">Filtros rápidos</div>
+  <button class="nav-item" onclick="filtroRapido('foja')" id="nav-foja"><i class="ti ti-file-description"></i> Sin foja</button>
+  <button class="nav-item" onclick="filtroRapido('voucher')" id="nav-voucher"><i class="ti ti-ticket"></i> Sin voucher</button>
+  <button class="nav-item" onclick="filtroRapido('factura')" id="nav-factura"><i class="ti ti-receipt"></i> Sin factura</button>
+  <button class="nav-item" onclick="filtroRapido('remito')" id="nav-remito"><i class="ti ti-truck"></i> Sin remito</button>
+  <div class="nav-sep"></div>
+  <div class="nav-sec">Herramientas</div>
+  <button class="nav-item" onclick="showPage('importar')" id="nav-importar"><i class="ti ti-upload"></i> Importar Excel</button>
+  <button class="nav-item" onclick="showPage('prompt')" id="nav-prompt"><i class="ti ti-brand-google"></i> Prompt IPSS</button>
+</nav>
+
+<div class="main">
+<div class="topbar">
+  <div class="topbar-title" id="topbar-title">Inicio</div>
+  <div class="topbar-actions">
+    <select style="font-size:12px;padding:5px 8px;border-radius:var(--rs);border:1px solid var(--border);background:white" id="fil-sanatorio-g" onchange="renderDash()">
+      <option value="">Todas las clínicas</option>
+    </select>
+    <button class="btn orange" onclick="openNueva()"><i class="ti ti-plus"></i> Nueva contratación</button>
+    <button class="btn" onclick="exportarExcel()"><i class="ti ti-download"></i> Exportar</button>
+  </div>
+</div>
+<div class="content">
+
+<!-- DASHBOARD -->
+<div class="page active" id="page-dashboard">
+  <div class="cards" id="dash-cards"></div>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem">
+    <div style="font-size:11px;font-weight:600;color:var(--od-blue);text-transform:uppercase;letter-spacing:.06em">Últimas contrataciones</div>
+  </div>
+  <div class="table-wrap"><table><thead><tr><th>N° Contratación</th><th>Tipo</th><th>Afiliado</th><th>Producto</th><th>Importe</th><th>Voucher</th><th>Remito</th><th>Foja</th><th>Factura</th><th>Estado</th></tr></thead><tbody id="dash-tbody"></tbody></table></div>
+</div>
+
+<!-- CONTRATACIONES -->
+<div class="page" id="page-contrataciones">
+  <div class="filter-bar">
+    <input type="text" id="fc-bus" placeholder="Buscar afiliado, N°, producto..." oninput="renderTabla()" style="width:240px">
+    <select id="fc-tipo" onchange="renderTabla()">
+      <option value="">Todos los tipos</option>
+      <option value="Urgencia">Urgencia</option>
+      <option value="Emergencia">Emergencia</option>
+    </select>
+    <select id="fc-san" onchange="renderTabla()">
+      <option value="">Todas las clínicas</option>
+    </select>
+    <select id="fc-estado" onchange="renderTabla()">
+      <option value="">Todos los estados</option>
+      <option value="completo">Completo</option>
+      <option value="incompleto">Incompleto</option>
+    </select>
+    <select id="fc-campo" onchange="renderTabla()">
+      <option value="">Todos los campos</option>
+      <option value="voucher">Sin voucher</option>
+      <option value="remito">Sin remito</option>
+      <option value="foja">Sin foja</option>
+      <option value="factura">Sin factura</option>
+      <option value="doctor">Sin doctor</option>
+      <option value="certificado">Sin certificado</option>
+      <option value="oc">Sin OC</option>
+    </select>
+    <span id="fc-count" style="font-size:12px;color:var(--text-muted);margin-left:4px"></span>
+  </div>
+  <div class="table-wrap" style="overflow-x:auto">
+  <table style="min-width:1400px">
+    <thead><tr>
+      <th style="min-width:120px">N° / Tipo</th>
+      <th style="min-width:60px">Fecha</th>
+      <th style="min-width:160px">Afiliado / DNI</th>
+      <th style="min-width:200px">Producto</th>
+      <th style="min-width:90px;text-align:right">Importe</th>
+      <th style="min-width:120px">Voucher</th>
+      <th style="min-width:100px">Doctor</th>
+      <th style="min-width:120px">Clínica / Sanatorio</th>
+      <th style="min-width:100px">Remito</th>
+      <th style="min-width:70px">Certificado</th>
+      <th style="min-width:60px">Foja</th>
+      <th style="min-width:100px">OC</th>
+      <th style="min-width:130px">Factura</th>
+      <th style="min-width:40px"></th>
+    </tr></thead>
+    <tbody id="cont-tbody"></tbody>
+  </table>
+  </div>
+</div>
+
+<!-- IMPORTAR -->
+<div class="page" id="page-importar">
+  <div style="max-width:600px">
+    <div class="nota-box"><i class="ti ti-info-circle"></i>Importá el Excel descargado del IPSS. Las contrataciones nuevas se agregan; las existentes (mismo N°) se ignoran para no pisar datos.</div>
+    <div class="form-row" style="margin-top:1rem">
+      <label class="form-label">Seleccionar archivo Excel del IPSS</label>
+      <input type="file" id="imp-file" accept=".xlsx,.xls" style="padding:8px">
+    </div>
+    <button class="btn primary" onclick="importarExcel()" style="margin-top:.5rem"><i class="ti ti-upload"></i> Importar</button>
+    <div id="imp-result" style="margin-top:1rem;font-size:13px"></div>
+    <div class="sec-title" style="margin-top:2rem">Formato esperado del Excel</div>
+    <p style="font-size:12px;color:var(--text-muted);line-height:1.6">El archivo debe tener estas columnas (en cualquier orden):<br>
+    <strong>N° Contratación / Tipo · Nombre del Afiliado · DNI · Fecha de Contratación · Producto Adjudicado · Importe Producto · Importe Total Adjudicado</strong><br><br>
+    Es el mismo formato que genera el prompt de Claude en Google.</p>
+  </div>
+</div>
+
+<!-- PROMPT -->
+<div class="page" id="page-prompt">
+  <div style="max-width:700px">
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:1rem;line-height:1.6">Usá este prompt en Claude (Google) para extraer las contrataciones del IPSS en el formato correcto para importar a esta app.</p>
+    <div class="prompt-box" id="prompt-text">Extraé todas las contrataciones de la tabla que te comparto de la web del IPSS y exportalas a un Excel con exactamente estas columnas en este orden:
+1. N° Contratación / Tipo
+2. Nombre del Afiliado
+3. DNI
+4. Fecha de Contratación
+5. Producto Adjudicado
+6. Importe Producto
+7. Importe Total Adjudicado
+
+Reglas:
+- Si una contratación tiene múltiples productos, poné cada producto en una fila separada, repitiendo los datos del afiliado.
+- En "N° Contratación / Tipo" usá el formato: Contratación Abreviada de [Tipo] N° [número]/[año]
+- En "Importe Producto" poné el precio unitario de ese ítem.
+- En "Importe Total Adjudicado" poné el total de la contratación (igual en todas las filas de la misma contratación).
+- Fechas en formato DD/MM/AAAA.
+- Importes sin símbolo de moneda, con punto como separador de miles y coma como decimal.
+- No agregues filas vacías entre contrataciones.
+- La primera fila debe ser el encabezado exacto indicado arriba.</div>
+    <button class="btn" onclick="copiarPrompt()" style="margin-top:.75rem"><i class="ti ti-copy"></i> Copiar prompt</button>
+  </div>
+</div>
+
+</div></div>
+
+<!-- MODAL NUEVA / EDITAR -->
+<div class="modal-overlay" id="modal-cont">
+<div class="modal">
+  <div class="modal-header">
+    <div class="modal-title" id="modal-cont-title">Nueva contratación</div>
+    <button class="btn sm" onclick="closeModal('modal-cont')"><i class="ti ti-x"></i></button>
+  </div>
+  <div class="sec-title" style="margin-top:0">Datos del IPSS</div>
+  <div class="form-grid">
+    <div class="form-row"><label class="form-label">N° Contratación</label><input id="mc-num" placeholder="ej: 3448/2026"></div>
+    <div class="form-row"><label class="form-label">Tipo</label><select id="mc-tipo"><option value="Urgencia">Urgencia</option><option value="Emergencia">Emergencia</option><option value="Otro">Otro</option></select></div>
+    <div class="form-row"><label class="form-label">Nombre del afiliado</label><input id="mc-nombre" placeholder="Apellido Nombre"></div>
+    <div class="form-row"><label class="form-label">DNI</label><input id="mc-dni" placeholder="12345678"></div>
+    <div class="form-row"><label class="form-label">Fecha</label><input type="date" id="mc-fecha"></div>
+    <div class="form-row"><label class="form-label">Importe total</label><input type="number" id="mc-importe" placeholder="0"></div>
+  </div>
+  <div class="form-row"><label class="form-label">Producto(s) adjudicado(s)</label><textarea id="mc-producto" rows="2" placeholder="Descripción del producto"></textarea></div>
+  <div class="sec-title">Documentación</div>
+  <div class="form-grid">
+    <div class="form-row"><label class="form-label">Voucher</label><input id="mc-voucher" placeholder="Número de voucher"></div>
+    <div class="form-row"><label class="form-label">Doctor</label><input id="mc-doctor" placeholder="Dr. Apellido"></div>
+    <div class="form-row"><label class="form-label">Clínica / Sanatorio</label><input id="mc-sanatorio" placeholder="Nombre de la clínica"></div>
+    <div class="form-row"><label class="form-label">Remito</label><input id="mc-remito" placeholder="N° remito"></div>
+    <div class="form-row"><label class="form-label">OC</label><input id="mc-oc" placeholder="N° OC"></div>
+    <div class="form-row"><label class="form-label">Foja</label><select id="mc-foja"><option value="">Sin foja</option><option value="ok">OK ✓</option></select></div>
+  </div>
+  <div class="form-grid">
+    <div class="form-row"><label class="form-label">Certificado de implantes</label><input id="mc-certificado" placeholder="Firmado OK / vacío si no aplica"></div>
+    <div class="form-row"><label class="form-label">Factura</label><input id="mc-factura" placeholder="N° factura"></div>
+  </div>
+  <div class="form-row"><label class="form-label">Notas / Observaciones</label><textarea id="mc-notas" rows="2" placeholder="Observaciones adicionales"></textarea></div>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-top:1.25rem">
+    <button class="btn danger" id="mc-del-btn" onclick="eliminarContratacion()" style="display:none"><i class="ti ti-trash"></i> Eliminar</button>
+    <div style="display:flex;gap:8px;margin-left:auto">
+      <button class="btn" onclick="closeModal('modal-cont')">Cancelar</button>
+      <button class="btn primary" id="mc-save-btn" onclick="guardarContratacion()">Guardar</button>
+    </div>
+  </div>
+</div></div>
+
+<script>
+// ===== FIREBASE =====
+const firebaseConfig = {databaseURL:"https://gestor-ips-odontomed-default-rtdb.firebaseio.com"};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const ref = db.ref('contrataciones');
+
+// ===== STATE =====
+const PAGE_TITLES = {dashboard:'Inicio',contrataciones:'Contrataciones',importar:'Importar Excel IPSS',prompt:'Prompt para Claude / Google'};
+let state = {contrataciones:[], currentId:null, loaded:false};
+
+// ===== SEED =====
+const SEED_DATA = 
+[{"id": "c_3448_2026", "numero": "3448/2026", "tipo": "Urgencia", "nombre": "Gimenez Carlos Sergio", "dni": "12553064", "fecha": "05/06/2026", "producto": "ANSA BIPOLAR TONTARRA", "importe": 410000.0, "oc": "", "remito": "", "foja": "", "sanatorio": "", "factura": "", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_3435_2026", "numero": "3435/2026", "tipo": "Urgencia", "nombre": "Zambrano Gladys Esther*", "dni": "11009808", "fecha": "05/06/2026", "producto": "BLISTER DE HEM-O-LOCK LARGE VIOLETA", "importe": 160000.0, "oc": "", "remito": "", "foja": "", "sanatorio": "", "factura": "", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_3431_2026", "numero": "3431/2026", "tipo": "Urgencia", "nombre": "Neveschanin Pedro Esteban", "dni": "8176259", "fecha": "05/06/2026", "producto": "INYECTOR DESCARTABLE", "importe": 30000.0, "oc": "", "remito": "", "foja": "", "sanatorio": "", "factura": "", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_3242_2026", "numero": "3242/2026", "tipo": "Emergencia", "nombre": "Guzman Maria Concepcion", "dni": "11282522", "fecha": "22/05/2026", "producto": "BOTON DE GASTROTOMIA CON BALON 24 FR X 3,5 CM", "importe": 200000.0, "oc": "09-12064", "remito": "05-59920721", "foja": "", "sanatorio": "", "factura": "05-42638", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_3227_2026", "numero": "3227/2026", "tipo": "Urgencia", "nombre": "Acuña Juan Agustin", "dni": "8162227", "fecha": "27/05/2026", "producto": "SILLA DE RUEDA\nANDADOR PLEGABLE LIVIANO", "importe": 520000.0, "oc": "Falta", "remito": "05-59921120", "foja": "", "sanatorio": "", "factura": "Falta OC", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_3195_2026", "numero": "3195/2026", "tipo": "Urgencia", "nombre": "Lezcano Ruben Ricardo", "dni": "21315093", "fecha": "25/05/2026", "producto": "ANSA DE CORTE BIPOLAR TIPO TONTARRA PARA RTU BIPOLAR", "importe": 410000.0, "oc": "", "remito": "", "foja": "", "sanatorio": "", "factura": "", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_3129_2026", "numero": "3129/2026", "tipo": "Urgencia", "nombre": "Jerez Daniela Ivone", "dni": "24298895", "fecha": "21/05/2026", "producto": "URETEROSCOPIO FLEXIBLE DESCARTABLE\nCANASTILLA DE NITINOL 1.5 FR\nVAINA DE ACCESO URETRAL", "importe": 2180000.0, "oc": "", "remito": "05-442", "foja": "", "sanatorio": "", "factura": "", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_3127_2026", "numero": "3127/2026", "tipo": "Urgencia", "nombre": "Lagoria Matilde Modesta", "dni": "5070610", "fecha": "21/05/2026", "producto": "ANSA DE RESECCION BIPOLAR TIPO TONTARRA", "importe": 400000.0, "oc": "", "remito": "", "foja": "", "sanatorio": "", "factura": "", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_3060_2026", "numero": "3060/2026", "tipo": "Urgencia", "nombre": "Cespedes Leila Patricia", "dni": "20247707", "fecha": "19/05/2026", "producto": "CLIPS HEMOSTATICO DE 14 MM", "importe": 60000.0, "oc": "", "remito": "", "foja": "", "sanatorio": "", "factura": "", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_3044_2026", "numero": "3044/2026", "tipo": "Emergencia", "nombre": "Torres De Vazquez Irene", "dni": "5415285", "fecha": "13/05/2026", "producto": "SET DE GASTROTOMIA ENDOSCOPICA PERCUTANEA 24 FR", "importe": 250000.0, "oc": "", "remito": "", "foja": "", "sanatorio": "", "factura": "", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_2974_2026", "numero": "2974/2026", "tipo": "Urgencia", "nombre": "Gilead Yuwal", "dni": "92911598", "fecha": "14/05/2026", "producto": "ANSA DE RTU BIPOLAR TIPO TONTARRA", "importe": 400000.0, "oc": "", "remito": "", "foja": "", "sanatorio": "", "factura": "", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_2966_2026", "numero": "2966/2026", "tipo": "Urgencia", "nombre": "Salinas Alicia Ramona", "dni": "24761245", "fecha": "14/05/2026", "producto": "CANASTILLA DE APERTURA FRONTAL DE 1.5 FR X 120 CM\nVAINA DE ACCESO URETERAL CON ASPIRACION DE 11/13 FR X 36 CM", "importe": 780000.0, "oc": "", "remito": "", "foja": "", "sanatorio": "", "factura": "", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_2823_2026", "numero": "2823/2026", "tipo": "Urgencia", "nombre": "Galviz Gerardo Cruz", "dni": "11852600", "fecha": "07/05/2026", "producto": "INYECTOR ENDOSCOPICO\nCLIP ENDOSCOPICO DE 16 MM", "importe": 230000.0, "oc": "03-53694", "remito": "05-438", "foja": "ok", "sanatorio": "Gasali", "factura": "05-42637", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_2822_2026", "numero": "2822/2026", "tipo": "Urgencia", "nombre": "Turquina Angelica Cristina", "dni": "13414227", "fecha": "07/05/2026", "producto": "INYECTOR PARA MUCOSECTOMIA\nCLIPS HEMOSTATICO\nINYECTOR PARA MUCOSECTOMIA\nCLIPS HEMOSTATICO", "importe": 290000.0, "oc": "", "remito": "", "foja": "", "sanatorio": "", "factura": "Facturar", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_2807_2026", "numero": "2807/2026", "tipo": "Emergencia", "nombre": "Pizarro Jorge Horacio", "dni": "4620693", "fecha": "04/05/2026", "producto": "CLIP HEMOSTATICO", "importe": 370000.0, "oc": "okk", "remito": "05-401", "foja": "Preguntar si hubo otra cirugia", "sanatorio": "", "factura": "", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_2761_2026", "numero": "2761/2026", "tipo": "Emergencia", "nombre": "Pizarro Jorge Horacio", "dni": "4620693", "fecha": "29/04/2026", "producto": "INYECTOR", "importe": 30000.0, "oc": "", "remito": "", "foja": "Preguntar si hubo otra cirugia", "sanatorio": "", "factura": "", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_2746_2026", "numero": "2746/2026", "tipo": "Urgencia", "nombre": "Jurado Karina De Los Angele", "dni": "22253731", "fecha": "05/05/2026", "producto": "SET DE GASTROSTOMIA 20 FR", "importe": 250000.0, "oc": "", "remito": "", "foja": "", "sanatorio": "", "factura": "", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_2721_2026", "numero": "2721/2026", "tipo": "Emergencia", "nombre": "Vera Estefania", "dni": "4472259", "fecha": "28/04/2026", "producto": "SET DE BANDAS ELASTICAS (X 7)", "importe": 200000.0, "oc": "", "remito": "", "foja": "", "sanatorio": "", "factura": "", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_2715_2026", "numero": "2715/2026", "tipo": "Urgencia", "nombre": "Gutierrez Ricardo Fernando", "dni": "17197105", "fecha": "04/05/2026", "producto": "HEMOCLIP DE 16 MM", "importe": 270000.0, "oc": "03-53611", "remito": "R05-5920743", "foja": "ok", "sanatorio": "Alas", "factura": "05-42640", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_2698_2026", "numero": "2698/2026", "tipo": "Urgencia", "nombre": "Rios Hugo Orlando", "dni": "26099761", "fecha": "04/05/2026", "producto": "SET DE GASTROSTOMIA 24 FR", "importe": 300000.0, "oc": "03-53612", "remito": "05-59920739", "foja": "ok", "sanatorio": "El Carmen", "factura": "05-42639", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_2685_2026", "numero": "2685/2026", "tipo": "Urgencia", "nombre": "Arias Nestor Ruben", "dni": "14708301", "fecha": "04/05/2026", "producto": "ANSA PARA RTU BIPOLAR", "importe": 400000.0, "oc": "03-53493", "remito": "05-59920534", "foja": "", "sanatorio": "Santa Clara", "factura": "FAC B 0005-00042486", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_2648_2026", "numero": "2648/2026", "tipo": "nan", "nombre": "Casimiro Facundo", "dni": "8160103", "fecha": "nan", "producto": "Ansa Bipolar Tontarra", "importe": 0.0, "oc": "", "remito": "", "foja": "", "sanatorio": "", "factura": "", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_2644_2026", "numero": "2644/2026", "tipo": "Emergencia", "nombre": "Carrasco Walter .", "dni": "12305168", "fecha": "27/04/2026", "producto": "SET DE GASTROTOMIA 22-24", "importe": 250000.0, "oc": "09-11935", "remito": "05-59920291", "foja": "", "sanatorio": "El Carmen", "factura": "FAC B 0005-00042485", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_2598_2026", "numero": "2598/2026", "tipo": "Emergencia", "nombre": "Benicio Alberto Jorge", "dni": "8554455", "fecha": "23/04/2026", "producto": "SET DE GASTROTOMIA ENDOSCOPICO PERCUTANEO", "importe": 250000.0, "oc": "Falta", "remito": "", "foja": "", "sanatorio": "", "factura": "", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_2580_2026", "numero": "2580/2026", "tipo": "Emergencia", "nombre": "Saravia Ines Alicia", "dni": "10166711", "fecha": "23/04/2026", "producto": "SET DE GASTROTOMIA PERCUTANEA", "importe": 200000.0, "oc": "", "remito": "", "foja": "", "sanatorio": "", "factura": "FAC B 0005-00042492", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_2547_2026", "numero": "2547/2026", "tipo": "Urgencia", "nombre": "Cardelli Rodolfo Dino Juan", "dni": "8442101", "fecha": "27/04/2026", "producto": "ANSA DE CORTE PARA RTU BIPOLAR", "importe": 400000.0, "oc": "", "remito": "", "foja": "", "sanatorio": "", "factura": "", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_2544_2026", "numero": "2544/2026", "tipo": "Urgencia", "nombre": "Soriano Hector Eduardo", "dni": "21313961", "fecha": "27/04/2026", "producto": "ENDOCLIP DE 16 MM\nAGUJA INYECTORA", "importe": 170000.0, "oc": "okk", "remito": "", "foja": "", "sanatorio": "", "factura": "Facturar", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_2522_2026", "numero": "2522/2026", "tipo": "Urgencia", "nombre": "Castellanos Osbaldo Bruno", "dni": "5076425", "fecha": "24/04/2026", "producto": "SET DE BANDAS ELASTICAS X 7", "importe": 200000.0, "oc": "", "remito": "", "foja": "", "sanatorio": "", "factura": "", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_2520_2026", "numero": "2520/2026", "tipo": "Urgencia", "nombre": "Salcedo Ubertel Gubencio", "dni": "7245347", "fecha": "24/04/2026", "producto": "SET DE GASTROSTOMIA PERCUTANEO ENDOSCOPICO DE 20 FR", "importe": 250000.0, "oc": "", "remito": "", "foja": "", "sanatorio": "", "factura": "", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_2509_2026", "numero": "2509/2026", "tipo": "Urgencia", "nombre": "Tolay De Pecho Rosa Graciela", "dni": "16167342", "fecha": "24/04/2026", "producto": "CLIPS HEMOSTATICO PARA ENDOSCOPIA", "importe": 60000.0, "oc": "", "remito": "", "foja": "", "sanatorio": "", "factura": "", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_2492_2026", "numero": "2492/2026", "tipo": "Urgencia", "nombre": "Cataldo Carmen", "dni": "17581920", "fecha": "23/04/2026", "producto": "INYECTOR PARA POLIPECTOMIA", "importe": 30000.0, "oc": "", "remito": "", "foja": "", "sanatorio": "", "factura": "", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_2464_2026", "numero": "2464/2026", "tipo": "Urgencia", "nombre": "Burgos De Guerrero Elizabeth", "dni": "17213577", "fecha": "23/04/2026", "producto": "INYECTOR PARA ENDOSCOPIA", "importe": 30000.0, "oc": "", "remito": "", "foja": "", "sanatorio": "", "factura": "", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_2437_2026", "numero": "2437/2026", "tipo": "Emergencia", "nombre": "Acosta Miguel Angel", "dni": "11657169", "fecha": "20/04/2026", "producto": "BOTON DE GASTROTOMIA 24F 4.5CM", "importe": 200000.0, "oc": "09-11863", "remito": "05-389", "foja": "", "sanatorio": "El Carmen", "factura": "FAC B 0005-00042484", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_2357_2026", "numero": "2357/2026", "tipo": "Urgencia", "nombre": "Britos Daniel Faustino", "dni": "21312027", "fecha": "21/04/2026", "producto": "INYECTOR PARA MUCOSECTOMIA", "importe": 30000.0, "oc": "", "remito": "", "foja": "", "sanatorio": "", "factura": "", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_2348_2026", "numero": "2348/2026", "tipo": "Urgencia", "nombre": "Casimiro Facundo", "dni": "8160103", "fecha": "21/04/2026", "producto": "ANSA DE RESECCION BIPOLAR TIPO STORZ", "importe": 400000.0, "oc": "", "remito": "", "foja": "", "sanatorio": "", "factura": "", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_2319_2026", "numero": "2319/2026", "tipo": "Urgencia", "nombre": "Puertas Jesus Aida", "dni": "4452597", "fecha": "20/04/2026", "producto": "ANSA MONOFILAMENTO DE NITINOL DE 10 A 20 MM", "importe": 55000.0, "oc": "", "remito": "", "foja": "", "sanatorio": "", "factura": "", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_2310_2026", "numero": "2310/2026", "tipo": "Urgencia", "nombre": "Marin Eduardo Luis", "dni": "10451889", "fecha": "20/04/2026", "producto": "SET DE GASTROSTOMIA DE 20 -24 FR", "importe": 200000.0, "oc": "", "remito": "", "foja": "", "sanatorio": "", "factura": "", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_2280_2026", "numero": "2280/2026", "tipo": "Urgencia", "nombre": "Riquelme Ramona", "dni": "12701602", "fecha": "17/04/2026", "producto": "COLCHON ANTIESCARAS", "importe": 90000.0, "oc": "", "remito": "", "foja": "", "sanatorio": "", "factura": "", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_2230_2026", "numero": "2230/2026", "tipo": "Urgencia", "nombre": "Romero Jorge Ramon", "dni": "8594964", "fecha": "16/04/2026", "producto": "SET DE GASTROSTOMIA PERCUTANEO ENDOSCOPICO 20 FR", "importe": 200000.0, "oc": "", "remito": "", "foja": "", "sanatorio": "", "factura": "", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_2103_2026", "numero": "2103/2026", "tipo": "Urgencia", "nombre": "Gutierrez Oscar Nelson", "dni": "20125765", "fecha": "13/04/2026", "producto": "ANSA PARA RTU BIPOLAR", "importe": 400000.0, "oc": "03-53434", "remito": "05-59920467", "foja": "", "sanatorio": "Santa Clara", "factura": "FAC B 0005-00042487", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_2102_2026", "numero": "2102/2026", "tipo": "Urgencia", "nombre": "Figueroa Noemi Evangelina", "dni": "26215450", "fecha": "13/04/2026", "producto": "CANASTILLA DE AGARRE FRONTAL DE 1.5 FR X 120 CM\nvaina de acceso ureteral 11 FR.", "importe": 545000.0, "oc": "", "remito": "", "foja": "", "sanatorio": "", "factura": "", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_1971_2026", "numero": "1971/2026", "tipo": "Urgencia", "nombre": "Calbo Hector Rolando", "dni": "17360868", "fecha": "08/04/2026", "producto": "ANSA DE RESECCION BIPOLAR", "importe": 400000.0, "oc": "", "remito": "", "foja": "", "sanatorio": "", "factura": "", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_1939_2026", "numero": "1939/2026", "tipo": "Urgencia", "nombre": "Saade Cesar Rene", "dni": "13428969", "fecha": "07/04/2026", "producto": "ANSA DE CORTE PARA RTU BIPOLAR", "importe": 400000.0, "oc": "03-53366", "remito": "05-59920234", "foja": "", "sanatorio": "Cenesa", "factura": "FAC B 0005-00042459", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_1798_2026", "numero": "1798/2026", "tipo": "Urgencia", "nombre": "Castiella Daniel Oscar", "dni": "24138996", "fecha": "31/03/2026", "producto": "CATETER DOBLE J 6 FR", "importe": 90000.0, "oc": "", "remito": "05-59920246", "foja": "", "sanatorio": "Tres Cerritos", "factura": "05-42458", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_1642_2026", "numero": "1642/2026", "tipo": "Urgencia", "nombre": "Nieva De Asensio Milagro", "dni": "4221564", "fecha": "25/03/2026", "producto": "ANDADOR", "importe": 80000.0, "oc": "", "remito": "", "foja": "", "sanatorio": "", "factura": "", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_1296_2026", "numero": "1296/2026", "tipo": "Urgencia", "nombre": "Zangara Rosa Beatriz", "dni": "25800854", "fecha": "05/03/2026", "producto": "ANSA DE RESECCION BIPOLAR HIBRIDA TIPO TONTARRA", "importe": 400000.0, "oc": "", "remito": "", "foja": "", "sanatorio": "", "factura": "", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_1257_2026", "numero": "1257/2026", "tipo": "Urgencia", "nombre": "Rodriguez De Burgos Rosa Rosa", "dni": "5070519", "fecha": "04/03/2026", "producto": "BASTON DE ALUMINIO DE ALTURA REGULABLE", "importe": 25000.0, "oc": "", "remito": "", "foja": "", "sanatorio": "", "factura": "", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_1148_2026", "numero": "1148/2026", "tipo": "Urgencia", "nombre": "Flores Lozano Gisella Valeria", "dni": "33762439", "fecha": "27/02/2026", "producto": "NEBULIZADOR A PISTON\nFLUTTER RESPIRATORIO", "importe": 110000.0, "oc": "", "remito": "05-59920006", "foja": "", "sanatorio": "", "factura": "FAC B 0005-00042473", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_1096_2026", "numero": "1096/2026", "tipo": "Urgencia", "nombre": "Peloc Hannah Alba Solange", "dni": "53038086", "fecha": "25/02/2026", "producto": "CATETER DOBLE J 4.8 FR X 22 CM", "importe": 80000.0, "oc": "", "remito": "", "foja": "", "sanatorio": "", "factura": "", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_987_2026", "numero": "987/2026", "tipo": "Urgencia", "nombre": "Gutierrez Hilda Marta", "dni": "5395990", "fecha": "23/02/2026", "producto": "BASTON CON APOYO TRIPODE", "importe": 40000.0, "oc": "", "remito": "", "foja": "", "sanatorio": "", "factura": "FAC B 0005-00042134", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_643_2026", "numero": "643/2026", "tipo": "Urgencia", "nombre": "Cabana Devora Norali", "dni": "42896973", "fecha": "05/02/2026", "producto": "PAPILOTOMO TRIPLE LUMEN", "importe": 300000.0, "oc": "", "remito": "", "foja": "", "sanatorio": "", "factura": "", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_298_2026", "numero": "298/2026", "tipo": "Urgencia", "nombre": "Arias Justina Aida", "dni": "4579198", "fecha": "21/01/2026", "producto": "PAPILOTOMO TRIPLE LUMEN", "importe": 300000.0, "oc": "", "remito": "", "foja": "", "sanatorio": "", "factura": "FAC B 0005-00042256", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_85556_2025", "numero": "85556/2025", "tipo": "nan", "nombre": "Miranda Alejandra Clara", "dni": "12958665", "fecha": "nan", "producto": "Ansa de 10mm AGS", "importe": 0.0, "oc": "", "remito": "", "foja": "", "sanatorio": "", "factura": "", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_83991_2025", "numero": "83991/2025", "tipo": "nan", "nombre": "Choque Esteban Guzman", "dni": "12710077", "fecha": "nan", "producto": "Ansa RTU Bipolar", "importe": 0.0, "oc": "", "remito": "", "foja": "", "sanatorio": "", "factura": "", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_9275_2025", "numero": "9275/2025", "tipo": "nan", "nombre": "Tolaba Mirta Hortensia", "dni": "25218724", "fecha": "nan", "producto": "Canastilla de agarre frontal 1,9 fr", "importe": 0.0, "oc": "03-0049068", "remito": "R05-0270", "foja": "", "sanatorio": "Imac", "factura": "Fac 05-038306", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_8859_2025", "numero": "8859/2025", "tipo": "nan", "nombre": "Genovese, Mirta Del Milagro", "dni": "10005370", "fecha": "nan", "producto": "Bastón Cuadruple", "importe": 0.0, "oc": "", "remito": "R05-59916812", "foja": "", "sanatorio": "", "factura": "FAc 05-41914", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_8717_2025", "numero": "8717/2025", "tipo": "nan", "nombre": "Pereyra Victor Hugo", "dni": "10993746", "fecha": "nan", "producto": "Silla de Rueda", "importe": 0.0, "oc": "", "remito": "", "foja": "", "sanatorio": "", "factura": "", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_8715_2025", "numero": "8715/2025", "tipo": "nan", "nombre": "Cayo De Villanueva Olga Ester", "dni": "11539976", "fecha": "nan", "producto": "Baston REgulable", "importe": 0.0, "oc": "", "remito": "R05-362", "foja": "", "sanatorio": "", "factura": "Fac 05-41908", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_7959_2025", "numero": "7959/2025", "tipo": "nan", "nombre": "Cuellar Maria De Los Angeles", "dni": "25411873", "fecha": "nan", "producto": "Ansa fria de polipectomia", "importe": 0.0, "oc": "", "remito": "05-353", "foja": "", "sanatorio": "Gasali", "factura": "", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_7432_2025", "numero": "7432/2025", "tipo": "nan", "nombre": "Tolaba Francisco Jesus", "dni": "10481943", "fecha": "nan", "producto": "Ansa Bipolar Tontarra", "importe": 0.0, "oc": "", "remito": "R05-341", "foja": "", "sanatorio": "Santa Clara", "factura": "", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_7419_2025", "numero": "7419/2025", "tipo": "nan", "nombre": "Quipildor Pedro", "dni": "8175805", "fecha": "nan", "producto": "Silla de rueda reforzada", "importe": 0.0, "oc": "OC 03-52143", "remito": "R05-59916090", "foja": "", "sanatorio": "", "factura": "Fac 05-41786", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_7386_2025", "numero": "7386/2025", "tipo": "nan", "nombre": "Perez José Manuel", "dni": "5076136", "fecha": "nan", "producto": "Ansa Bipolar Tontarra", "importe": 0.0, "oc": "", "remito": "", "foja": "", "sanatorio": "", "factura": "", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_7366_2025", "numero": "7366/2025", "tipo": "nan", "nombre": "Lopez Eugenia De Los Angeles", "dni": "32192154", "fecha": "nan", "producto": "Cateter doble J y Guia hidrofilica", "importe": 0.0, "oc": "OC09-10797", "remito": "R05-59915642", "foja": "", "sanatorio": "Hpmi", "factura": "Fac 05-41710", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_7363_2025", "numero": "7363/2025", "tipo": "nan", "nombre": "Angel De Aylan Nelly", "dni": "16735298", "fecha": "nan", "producto": "Inyector y Ansa", "importe": 0.0, "oc": "09-10727", "remito": "R05-333", "foja": "", "sanatorio": "El Carmen", "factura": "Fac 05-41712", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_7062_2025", "numero": "7062/2025", "tipo": "nan", "nombre": "Vizgarra De Ibañez Maria", "dni": "13938900", "fecha": "nan", "producto": "Silla de rueda reforzada", "importe": 0.0, "oc": "OC03-52127", "remito": "R05-59915821", "foja": "", "sanatorio": "", "factura": "Fac 05-41787", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_6859_2025", "numero": "6859/2025", "tipo": "nan", "nombre": "Royo Paola Rita", "dni": "24799011", "fecha": "nan", "producto": "Par de Bastón Canadiense", "importe": 0.0, "oc": "", "remito": "R05-59915472", "foja": "", "sanatorio": "", "factura": "Fac 05-41326", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_6823_2025", "numero": "6823/2025", "tipo": "nan", "nombre": "Velez Jose Pedro", "dni": "6611739", "fecha": "nan", "producto": "Ansa RTU Bipolar", "importe": 0.0, "oc": "Oc03-51872", "remito": "R05-59915353", "foja": "", "sanatorio": "Cenesa", "factura": "Fac05-41735", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_6798_2025", "numero": "6798/2025", "tipo": "nan", "nombre": "Wegner Ricardo Roberto", "dni": "13642047", "fecha": "nan", "producto": "Ansa RTU Bipolar", "importe": 0.0, "oc": "03-51871", "remito": "R05-59915428", "foja": "", "sanatorio": "Cenesa", "factura": "Fac05-41736", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_6786_2025", "numero": "6786/2025", "tipo": "nan", "nombre": "Condori Juana Francisca", "dni": "4713028", "fecha": "nan", "producto": "Andador tipo baston", "importe": 0.0, "oc": "", "remito": "R-05-59915448", "foja": "", "sanatorio": "", "factura": "Fac 05-41212", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_6737_2025", "numero": "6737/2025", "tipo": "nan", "nombre": "Dejana Maria Francisca", "dni": "3498405", "fecha": "nan", "producto": "Colchon Antiescaras", "importe": 0.0, "oc": "", "remito": "R05-59915299", "foja": "", "sanatorio": "", "factura": "Fac 05-41184", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_6733_2025", "numero": "6733/2025", "tipo": "nan", "nombre": "Grande Durand Juan Carlos", "dni": "92611094", "fecha": "nan", "producto": "Ansa RTU Bipolar", "importe": 0.0, "oc": "03-51897", "remito": "R05-59915348", "foja": "", "sanatorio": "Cenesa", "factura": "Fac05-41734", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_6619_2025", "numero": "6619/2025", "tipo": "nan", "nombre": "Lovaglio De Rivero Susana", "dni": "6343993", "fecha": "nan", "producto": "Colchon Antiescaras", "importe": 0.0, "oc": "", "remito": "R05-59915231", "foja": "", "sanatorio": "", "factura": "Fac 05-41185", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_6410_2025", "numero": "6410/2025", "tipo": "nan", "nombre": "Kohler Carlos Alberto", "dni": "8182824", "fecha": "nan", "producto": "Ansa Bipolar Tontarra", "importe": 0.0, "oc": "oc03-51763", "remito": "R05-324", "foja": "", "sanatorio": "Santa Clara", "factura": "Fac 05-41711", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_6296_2025", "numero": "6296/2025", "tipo": "nan", "nombre": "Juarez Oscar Enrique", "dni": "14651796", "fecha": "nan", "producto": "Ansa RTU Bipolar", "importe": 0.0, "oc": "03-51669", "remito": "R05-321", "foja": "", "sanatorio": "Cenesa", "factura": "Fac 05-41208", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_6211_2025", "numero": "6211/2025", "tipo": "nan", "nombre": "Alvarez Gustavo Adolfo", "dni": "17360878", "fecha": "nan", "producto": "Tijera Laparoscopica", "importe": 0.0, "oc": "03-51617", "remito": "R05-319", "foja": "", "sanatorio": "Tres Cerritos", "factura": "Fac 05-41187", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_6194_2025", "numero": "6194/2025", "tipo": "nan", "nombre": "Soriano Isaias Exequiel", "dni": "50219967", "fecha": "nan", "producto": "Oximetro de pulso", "importe": 0.0, "oc": "", "remito": "R05-336", "foja": "", "sanatorio": "", "factura": "Fac 05-41472", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_6178_2025", "numero": "6178/2025", "tipo": "nan", "nombre": "Torrado Fernanda", "dni": "29917573", "fecha": "nan", "producto": "Ansa de Polipectomia 15-20mm", "importe": 0.0, "oc": "", "remito": "R05-59916089", "foja": "", "sanatorio": "Imac", "factura": "Fac 05-42440", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_6175_2025", "numero": "6175/2025", "tipo": "nan", "nombre": "Medina Martin Santiago", "dni": "8019385", "fecha": "nan", "producto": "Hemoclip de 16mm", "importe": 0.0, "oc": "", "remito": "", "foja": "", "sanatorio": "", "factura": "", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_6077_2025", "numero": "6077/2025", "tipo": "nan", "nombre": "Navarro Cuadra De Guerrero Ana", "dni": "4418647", "fecha": "nan", "producto": "Andador tipo baston", "importe": 0.0, "oc": "", "remito": "B05-40726", "foja": "", "sanatorio": "", "factura": "Fac 05-041183", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_5933_2025", "numero": "5933/2025", "tipo": "nan", "nombre": "Campos Sergui Manuel", "dni": "16803801", "fecha": "nan", "producto": "Ansa Bipolar Tontarra", "importe": 0.0, "oc": "03-51535", "remito": "", "foja": "", "sanatorio": "Cenesa", "factura": "", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_5912_2025", "numero": "5912/2025", "tipo": "nan", "nombre": "Montalbetti Daniela Alejandra", "dni": "21634902", "fecha": "nan", "producto": "Ansa Hexag 2-3cm, Inyector", "importe": 0.0, "oc": "", "remito": "", "foja": "", "sanatorio": "Imac", "factura": "", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_5867_2025", "numero": "5867/2025", "tipo": "nan", "nombre": "Precio Victoria Del Carmen", "dni": "17309302", "fecha": "nan", "producto": "Ansa de Polipectomia", "importe": 0.0, "oc": "", "remito": "R05-59915584", "foja": "", "sanatorio": "El Carmen", "factura": "Fac 05-41785", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_5740_2025", "numero": "5740/2025", "tipo": "nan", "nombre": "Reynoso Raul Alfredo", "dni": "8333452", "fecha": "nan", "producto": "Ansa Bipolar Tontarra", "importe": 0.0, "oc": "", "remito": "", "foja": "", "sanatorio": "", "factura": "", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_5587_2025", "numero": "5587/2025", "tipo": "nan", "nombre": "Moroni Jorge Carlos", "dni": "13347527", "fecha": "nan", "producto": "set Malecot x 2", "importe": 0.0, "oc": "09-10151", "remito": "R05-0308", "foja": "", "sanatorio": "El Carmen", "factura": "Fac 05-41205", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_5421_2025", "numero": "5421/2025", "tipo": "nan", "nombre": "Martinez Gregorio Benito", "dni": "23632551", "fecha": "nan", "producto": "Inyector, Ansa 15mm", "importe": 0.0, "oc": "", "remito": "", "foja": "", "sanatorio": "", "factura": "", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_5266_2025", "numero": "5266/2025", "tipo": "nan", "nombre": "Granata Claudio Antonio", "dni": "11592085", "fecha": "nan", "producto": "Ansa Bipolar Tontarra", "importe": 0.0, "oc": "03-51029", "remito": "R05-311", "foja": "", "sanatorio": "Cenesa", "factura": "Fac 05-51209", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_5265_2025", "numero": "5265/2025", "tipo": "nan", "nombre": "Vuksanovic Marcos Marcelo", "dni": "11081371", "fecha": "nan", "producto": "Ansa Bipolar Tontarra", "importe": 0.0, "oc": "", "remito": "", "foja": "", "sanatorio": "", "factura": "", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_5250_2025", "numero": "5250/2025", "tipo": "nan", "nombre": "Gutierrez Jesica Pamela Teresa", "dni": "34846858", "fecha": "nan", "producto": "Cateter Doble J Percuflex x3", "importe": 0.0, "oc": "03-51608", "remito": "R05-323", "foja": "", "sanatorio": "Hpmi", "factura": "Fac 05-41204", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_5249_2025", "numero": "5249/2025", "tipo": "nan", "nombre": "Pierola Gustavo Adolfo", "dni": "13844201", "fecha": "nan", "producto": "Ansa Bipolar Tontarra", "importe": 0.0, "oc": "03-51182", "remito": "R05-312", "foja": "", "sanatorio": "Imac", "factura": "Fac 05-41211", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_5214_2025", "numero": "5214/2025", "tipo": "nan", "nombre": "Sona Nora Raquel", "dni": "10494905", "fecha": "nan", "producto": "Cateter Open End 5fr", "importe": 0.0, "oc": "09-10055", "remito": "R05-0305", "foja": "", "sanatorio": "Imac", "factura": "Fac 05-41206", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_5118_2025", "numero": "5118/2025", "tipo": "nan", "nombre": "Martin Angel Eduardo", "dni": "8160909", "fecha": "nan", "producto": "Ansa Bipolar Tontarra", "importe": 0.0, "oc": "", "remito": "R05-59914376", "foja": "", "sanatorio": "Santa Clara", "factura": "Fac 05-40832", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_5009_2025", "numero": "5009/2025", "tipo": "nan", "nombre": "Costa Ricardo Juan", "dni": "7730157", "fecha": "nan", "producto": "HemoClip talle L x2u", "importe": 0.0, "oc": "", "remito": "", "foja": "", "sanatorio": "", "factura": "", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_4982_2025", "numero": "4982/2025", "tipo": "nan", "nombre": "Espinoza Jose Ricardo", "dni": "23653133", "fecha": "nan", "producto": "Ansa Tontarra", "importe": 0.0, "oc": "03-51030", "remito": "R05-0307", "foja": "", "sanatorio": "El Carmen", "factura": "Fac 05-41325", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_4733_2025", "numero": "4733/2025", "tipo": "nan", "nombre": "Marquez Pedro Alberto", "dni": "8198642", "fecha": "nan", "producto": "Baston Tripode Aluminio", "importe": 0.0, "oc": "", "remito": "R05-59914022", "foja": "", "sanatorio": "", "factura": "", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_4650_2025", "numero": "4650/2025", "tipo": "nan", "nombre": "Medina Sosa", "dni": "9998741", "fecha": "nan", "producto": "Bastón de Madera", "importe": 0.0, "oc": "", "remito": "", "foja": "", "sanatorio": "", "factura": "", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_4340_2025", "numero": "4340/2025", "tipo": "nan", "nombre": "Iren Josefina Antonela", "dni": "48278805", "fecha": "nan", "producto": "Cateter Opend End 5fr", "importe": 0.0, "oc": "03-050770", "remito": "R05-0313", "foja": "", "sanatorio": "Hmi", "factura": "Fac 05-41207", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_4099_2025", "numero": "4099/2025", "tipo": "nan", "nombre": "Lopez De Honecker Noemi", "dni": "11943190", "fecha": "nan", "producto": "Hemoclip", "importe": 0.0, "oc": "", "remito": "", "foja": "", "sanatorio": "", "factura": "", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_3993_2025", "numero": "3993/2025", "tipo": "nan", "nombre": "Fernandez Carissimo Nidia Teresa", "dni": "6133115", "fecha": "nan", "producto": "Inyector AGS", "importe": 0.0, "oc": "", "remito": "R05-0310", "foja": "", "sanatorio": "Santa Clara", "factura": "Fac 05-40834", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_3980_2025", "numero": "3980/2025", "tipo": "nan", "nombre": "Moya Oscar Daniel", "dni": "16735130", "fecha": "nan", "producto": "Ansa Bipolar Tontarra", "importe": 0.0, "oc": "03-50553", "remito": "R05-303", "foja": "", "sanatorio": "Swiss Medical", "factura": "Fac 05-39960", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_3605_2025", "numero": "3605/2025", "tipo": "nan", "nombre": "Cuellar Jose Eladio", "dni": "8184715", "fecha": "nan", "producto": "Ansa RTU Bipolar", "importe": 0.0, "oc": "09-10494", "remito": "R05-321", "foja": "", "sanatorio": "Imac", "factura": "Fac 05-41210", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_3452_2025", "numero": "3452/2025", "tipo": "nan", "nombre": "Quiroga Omar Federico", "dni": "20919232", "fecha": "nan", "producto": "Inyector AGS", "importe": 0.0, "oc": "03-51045", "remito": "R05-0309", "foja": "", "sanatorio": "Santa Clara", "factura": "Fac 05-41660", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_3381_2025", "numero": "3381/2025", "tipo": "nan", "nombre": "Sanchez Tomas Marino", "dni": "16885453", "fecha": "nan", "producto": "Ansa Bipolar Tontarra", "importe": 0.0, "oc": "", "remito": "", "foja": "", "sanatorio": "", "factura": "", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_3290_2025", "numero": "3290/2025", "tipo": "nan", "nombre": "Reinaga Rodolfo Lucas", "dni": "12308279", "fecha": "nan", "producto": "Ansa Bipolar Tontarra", "importe": 0.0, "oc": "", "remito": "", "foja": "", "sanatorio": "", "factura": "", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_3288_2025", "numero": "3288/2025", "tipo": "nan", "nombre": "Gonzalez Jorge Ruben", "dni": "16423244", "fecha": "nan", "producto": "Ansa para RTU Bipolar Tontarra", "importe": 0.0, "oc": "03-050175", "remito": "R05-59913422", "foja": "", "sanatorio": "Santa Clara", "factura": "Fac 05-039588", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_3286_2025", "numero": "3286/2025", "tipo": "nan", "nombre": "Carrizo Aldo Alejandro", "dni": "18120034", "fecha": "nan", "producto": "Guia Sensor,", "importe": 0.0, "oc": "", "remito": "R05-59913342", "foja": "", "sanatorio": "Imac", "factura": "Fac 05-39652", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_2981_2025", "numero": "2981/2025", "tipo": "nan", "nombre": "Galvan Norma Nidia", "dni": "4646447", "fecha": "nan", "producto": "Hemoclip, inyector", "importe": 0.0, "oc": "03-050137", "remito": "R05-5991335", "foja": "", "sanatorio": "Santa Clara", "factura": "Fac 05-039961", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_2833_2025", "numero": "2833/2025", "tipo": "nan", "nombre": "Baigorria Armando Antonio", "dni": "8180640", "fecha": "nan", "producto": "Ansa Bipolar Tontarra", "importe": 0.0, "oc": "", "remito": "", "foja": "", "sanatorio": "", "factura": "", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_2482_2025", "numero": "2482/2025", "tipo": "nan", "nombre": "Balverdi Yonni Nelson", "dni": "24246895", "fecha": "nan", "producto": "Ansa Bipolar Tontarra", "importe": 0.0, "oc": "", "remito": "", "foja": "", "sanatorio": "", "factura": "", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_2232_2025", "numero": "2232/2025", "tipo": "nan", "nombre": "Mamani Luis Alfredo", "dni": "33042099", "fecha": "nan", "producto": "canastilla de agarre lateral", "importe": 0.0, "oc": "", "remito": "", "foja": "", "sanatorio": "", "factura": "", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_2071_2025", "numero": "2071/2025", "tipo": "nan", "nombre": "Acosta Hector Jose", "dni": "16934604", "fecha": "nan", "producto": "Papilotomo, guia", "importe": 0.0, "oc": "09-009265", "remito": "R05-00268", "foja": "", "sanatorio": "Imac", "factura": "Fac 03-9483", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_1741_2025", "numero": "1741/2025", "tipo": "nan", "nombre": "Martinez Silvia Estela", "dni": "17972832", "fecha": "nan", "producto": "Ansa de Polipectomia", "importe": 0.0, "oc": "", "remito": "R05-59912626", "foja": "", "sanatorio": "Imac", "factura": "Fac 05-39685", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_1729_2025", "numero": "1729/2025", "tipo": "nan", "nombre": "Jaime Jose Alejandro", "dni": "25662827", "fecha": "nan", "producto": "Cateter Openend, Guia Hidrofilica, canastilla", "importe": 0.0, "oc": "", "remito": "", "foja": "", "sanatorio": "", "factura": "", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_1720_2025", "numero": "1720/2025", "tipo": "nan", "nombre": "Zoloaga Martinez Graciela Mariana", "dni": "21316353", "fecha": "nan", "producto": "Ansa polipectomia, Hemoclip 22mm, inyector", "importe": 0.0, "oc": "03-049698", "remito": "R05-59913122", "foja": "", "sanatorio": "Santa Clara", "factura": "Fac 05-039477", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_1560_2025", "numero": "1560/2025", "tipo": "nan", "nombre": "Escobar De Humano Lucrecia Andrea", "dni": "3675847", "fecha": "nan", "producto": "Boton Gastrico", "importe": 0.0, "oc": "03-049609", "remito": "R05-0277", "foja": "", "sanatorio": "Santa Clara", "factura": "Fac 05-039591", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_1197_2025", "numero": "1197/2025", "tipo": "nan", "nombre": "Suarez Carlos Alberto", "dni": "8415415", "fecha": "nan", "producto": "Ansa Bipolar Tontarra", "importe": 0.0, "oc": "03-049480", "remito": "R05-00264", "foja": "", "sanatorio": "Santa Clara", "factura": "Fac 05-039481", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_1196_2025", "numero": "1196/2025", "tipo": "nan", "nombre": "Jurado María Eugenia", "dni": "26627391", "fecha": "nan", "producto": "Canastilla de Agarre Frontal de 1,9Fr Rocamed y guia Sensor", "importe": 0.0, "oc": "03-049558", "remito": "R05-0269", "foja": "", "sanatorio": "Imac", "factura": "Fac 05-039479", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_1194_2025", "numero": "1194/2025", "tipo": "nan", "nombre": "Blas Mendoza Alvaro Domingo", "dni": "56226251", "fecha": "nan", "producto": "Guia Hidrofilica Rocamed", "importe": 0.0, "oc": "03-049484", "remito": "R05-00263", "foja": "", "sanatorio": "Hmi", "factura": "Fac 05-039484", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_702_2025", "numero": "702/2025", "tipo": "nan", "nombre": "Angel De Yapura Catalina", "dni": "976558", "fecha": "nan", "producto": "Andador Tijera", "importe": 0.0, "oc": "03-049314", "remito": "R05-5991937", "foja": "", "sanatorio": "", "factura": "Fac 05-038313", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_686_2025", "numero": "686/2025", "tipo": "nan", "nombre": "Lopez Luis Hernan", "dni": "37087823", "fecha": "nan", "producto": "Inmobilizador de Rodilla tripanel", "importe": 0.0, "oc": "El paciente dijo que no era lo que necesitaba 03-049288", "remito": "", "foja": "", "sanatorio": "", "factura": "", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_648_2025", "numero": "648/2025", "tipo": "nan", "nombre": "Ruiz Molina Martin", "dni": "13346338", "fecha": "nan", "producto": "Vaina Bi Flex, Guia Sensor", "importe": 0.0, "oc": "03-049332", "remito": "R05-00260", "foja": "", "sanatorio": "Priv. Tres Cerritos", "factura": "Fac 05-039589", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_647_2025", "numero": "647/2025", "tipo": "nan", "nombre": "Aguirre Leonardo Francisco", "dni": "24056963", "fecha": "nan", "producto": "Clip endoscopico", "importe": 0.0, "oc": "", "remito": "", "foja": "", "sanatorio": "", "factura": "", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_646_2025", "numero": "646/2025", "tipo": "nan", "nombre": "Tejadas Victor Manuel", "dni": "30087430", "fecha": "nan", "producto": "Ansa, clip de hemostasia, Inyector", "importe": 0.0, "oc": "03-049300", "remito": "R05-0265", "foja": "", "sanatorio": "Santa Clara", "factura": "Fac 05-039480", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_460_2025", "numero": "460/2025", "tipo": "nan", "nombre": "Ferreira Ricardo Luis", "dni": "13845092", "fecha": "nan", "producto": "Ansa para RTU Bipolar Tontarra", "importe": 0.0, "oc": "03-049235", "remito": "R05-00257", "foja": "", "sanatorio": "Santa Clara", "factura": "Fac 05-038312", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_428_2025", "numero": "428/2025", "tipo": "nan", "nombre": "Chañe Reymundo", "dni": "13917282", "fecha": "nan", "producto": "Bastón de Alumino Silfab", "importe": 0.0, "oc": "", "remito": "", "foja": "", "sanatorio": "", "factura": "", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_262_2025", "numero": "262/2025", "tipo": "nan", "nombre": "Mamani Francisco Rolando", "dni": "28902794", "fecha": "nan", "producto": "Canastilla de Agarre Frontal de 1,9Fr Rocamed", "importe": 0.0, "oc": "03-049243", "remito": "R05-00256", "foja": "", "sanatorio": "Santa Clara", "factura": "Fac 05-038311", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_229_2025", "numero": "229/2025", "tipo": "nan", "nombre": "Quispe Ernesto Regino", "dni": "7256493", "fecha": "nan", "producto": "Guia Hidrofilica Rocamed", "importe": 0.0, "oc": "", "remito": "", "foja": "", "sanatorio": "", "factura": "", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_90078_2024", "numero": "90078/2024", "tipo": "nan", "nombre": "Ortiz De C. Martina", "dni": "14478878", "fecha": "nan", "producto": "Papilotomo Triple Lumen", "importe": 0.0, "oc": "03-0048709", "remito": "R05-59910980", "foja": "", "sanatorio": "San Roque", "factura": "Fac 05-038105", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_86190_2024", "numero": "86190/2024", "tipo": "nan", "nombre": "Gutierrez Fanny", "dni": "22484019", "fecha": "nan", "producto": "Guia Uretral", "importe": 0.0, "oc": "03-0048557", "remito": "R05-59910857", "foja": "", "sanatorio": "Imac", "factura": "Fac 05-038544", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_84240_2024", "numero": "84240/2024", "tipo": "nan", "nombre": "Aucapiña Sabas", "dni": "13748915", "fecha": "nan", "producto": "Ansa", "importe": 0.0, "oc": "03-0048530", "remito": "R05-59910756", "foja": "", "sanatorio": "Santa Clara", "factura": "Fac 05-038102", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_10307_2024", "numero": "10307/2024", "tipo": "nan", "nombre": "Justiniano Yolanda Pastora", "dni": "12957034", "fecha": "nan", "producto": "Papilotomo Triple Lumen", "importe": 0.0, "oc": "09-008728", "remito": "R05-00247", "foja": "", "sanatorio": "Imac", "factura": "Fac 05-038543", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_10265_2024", "numero": "10265/2024", "tipo": "nan", "nombre": "Salazar Lucio", "dni": "13455793", "fecha": "nan", "producto": "Trocar Descartable de 5mm Laposurge x2", "importe": 0.0, "oc": "", "remito": "", "foja": "", "sanatorio": "", "factura": "", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_10109_2024", "numero": "10109/2024", "tipo": "nan", "nombre": "Diaz Roberto Eugenio", "dni": "12553134", "fecha": "nan", "producto": "Ansa de corte para RTU Bipolar", "importe": 0.0, "oc": "", "remito": "", "foja": "", "sanatorio": "", "factura": "", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_9954_2024", "numero": "9954/2024", "tipo": "nan", "nombre": "Tolaba Mirta Hortensia", "dni": "25218724", "fecha": "nan", "producto": "Guia Hidrofilica Rocamed 0,035 inch punta curva", "importe": 0.0, "oc": "03-0049069", "remito": "R05-0271", "foja": "", "sanatorio": "Imac", "factura": "Fac 05-038307", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_9777_2024", "numero": "9777/2024", "tipo": "nan", "nombre": "Chavez Patricia María De Lo", "dni": "28887432", "fecha": "nan", "producto": "Guia Hidrofilica 0,035 1,5mt Rocamed", "importe": 0.0, "oc": "09-008646", "remito": "R05-0242", "foja": "", "sanatorio": "San Roque", "factura": "Fac 05-039421", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_9763_2024", "numero": "9763/2024", "tipo": "nan", "nombre": "Ovejero Alvarado Jorge Federico", "dni": "10133127", "fecha": "nan", "producto": "Cateter Doble J Boston", "importe": 0.0, "oc": "03-0048933", "remito": "R05-0249", "foja": "", "sanatorio": "Priv. Tres Cerritos", "factura": "Fac 05-038108", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_9717_2024", "numero": "9717/2024", "tipo": "nan", "nombre": "Carrizo Aldo Alejando", "dni": "18120034", "fecha": "nan", "producto": "Cateter Pigtail 26x6fr Boston x 2 + Guia sensor 0,035 Rocamed", "importe": 0.0, "oc": "09-008700", "remito": "R05-0244", "foja": "", "sanatorio": "Imac", "factura": "Fac 05-38114", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_9600_2024", "numero": "9600/2024", "tipo": "nan", "nombre": "Rey Gustavo Adolfo", "dni": "8538023", "fecha": "nan", "producto": "Guia 0,035 AGS+Ansa 30mm AGS+Aguja AGS", "importe": 0.0, "oc": "09-008702", "remito": "R05-0241", "foja": "", "sanatorio": "Gasalt", "factura": "Fac 05-038113", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_9593_2024", "numero": "9593/2024", "tipo": "nan", "nombre": "Molina Nestor Atilio", "dni": "7636948", "fecha": "nan", "producto": "Ansa Bipolar Tontarra", "importe": 0.0, "oc": "09-008615", "remito": "R05-00237", "foja": "", "sanatorio": "Santa Clara", "factura": "Fac 05-039482", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_9521_2024", "numero": "9521/2024", "tipo": "nan", "nombre": "Mamani Sergio Daniel", "dni": "2438668", "fecha": "nan", "producto": "Canastilla de Agarre Frontal de 1,9Fr Rocamed", "importe": 0.0, "oc": "09-008707", "remito": "R05-00243", "foja": "", "sanatorio": "Santa Clara", "factura": "Fac 05-038545", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_9518_2024", "numero": "9518/2024", "tipo": "nan", "nombre": "Nieto Nestor Martin", "dni": "7251459", "fecha": "nan", "producto": "Set de nefrestomiaCook 14fr+Guia hidrofilica 0,035Rocamed", "importe": 0.0, "oc": "", "remito": "", "foja": "", "sanatorio": "", "factura": "", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_9498_2024", "numero": "9498/2024", "tipo": "nan", "nombre": "Yurquina Lydia Berta", "dni": "10872711", "fecha": "nan", "producto": "Cateter Doble J Boston+guia", "importe": 0.0, "oc": "09-0008607", "remito": "R05-00234", "foja": "", "sanatorio": "Imac", "factura": "Fac 05-038101", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_9440_2024", "numero": "9440/2024", "tipo": "nan", "nombre": "Salas Teresa Virginia", "dni": "10384907", "fecha": "nan", "producto": "Guia Hidrofilica Rocamed +Cateter doble JBoston", "importe": 0.0, "oc": "09-008593", "remito": "R05-0236", "foja": "", "sanatorio": "Imac", "factura": "Fac 05-038103", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_9334_2024", "numero": "9334/2024", "tipo": "nan", "nombre": "Gallardo Hector Daniel", "dni": "22056719", "fecha": "nan", "producto": "Ansa Bipolar Tontarra", "importe": 0.0, "oc": "03-0048754", "remito": "R05-0245", "foja": "", "sanatorio": "Santa Clara", "factura": "Fac 05-038099", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_9310_2024", "numero": "9310/2024", "tipo": "nan", "nombre": "Leañez Antonio", "dni": "14695139", "fecha": "nan", "producto": "Papilotomo + Guia Hidrofilica", "importe": 0.0, "oc": "03-0048719", "remito": "R05-00248", "foja": "", "sanatorio": "San Roque", "factura": "Fac 05-038104", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_9273_2024", "numero": "9273/2024", "tipo": "nan", "nombre": "Vargas, Nestor Eduardo", "dni": "12790179", "fecha": "nan", "producto": "Guia + Aguja de puncion + Set percutaneo", "importe": 0.0, "oc": "03-0048810", "remito": "R05-00270", "foja": "", "sanatorio": "Priv. Tres Cerritos", "factura": "Fac 05-038546", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_2211_205", "numero": "2211/205", "tipo": "nan", "nombre": "Molina Jorge Esteban", "dni": "11283136", "fecha": "nan", "producto": "cateter Open end, guia hidrofilica, camisa de acceso, canastilla de dormia", "importe": 0.0, "oc": "03-050018", "remito": "R05-59913348", "foja": "", "sanatorio": "Tres Cerritos", "factura": "Fac 05-039590", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c_66_28_2025", "numero": "66/28/2025", "tipo": "nan", "nombre": "Saravia Toledo, Maria Mercedes", "dni": "10166021", "fecha": "nan", "producto": "Colchon Antiescaras", "importe": 0.0, "oc": "", "remito": "R05-59915404", "foja": "", "sanatorio": "", "factura": "Fac 05-41186", "voucher": "", "doctor": "", "certificado": "", "notas": ""}, {"id": "c__2025", "numero": "/2025", "tipo": "nan", "nombre": "Rodriguez Ricardo", "dni": "13220284", "fecha": "nan", "producto": "2 Ansas RTU Bipolar", "importe": 0.0, "oc": "", "remito": "", "foja": "", "sanatorio": "", "factura": "", "voucher": "", "doctor": "", "certificado": "", "notas": ""}];
+
+// ===== FIREBASE HELPERS =====
+function setSyncDot(s){const d=document.getElementById('sync-dot');d.className='sync-dot '+s;}
+async function saveContratacion(c){
+  setSyncDot('syncing');
+  try{
+    const key=c.id.replace(/[.#$[\]/]/g,'_');
+    await ref.child(key).set(c);
+    setSyncDot('ok');
+  }catch(e){setSyncDot('error');toast('Error Firebase: '+e.message,'error');}
+}
+async function deleteContratacion(id){
+  const key=id.replace(/[.#$[\]/]/g,'_');
+  await ref.child(key).remove();
+}
+
+function initFirebase(){
+  setSyncDot('syncing');
+  ref.on('value',snap=>{
+    const data=snap.val();
+    if(data){
+      state.contrataciones=Object.values(data);
+    } else if(!state.loaded){
+      // Primera vez: cargar seed
+      SEED_DATA.forEach(c=>saveContratacion(c));
+      state.contrataciones=JSON.parse(JSON.stringify(SEED_DATA));
+    }
+    state.loaded=true;
+    setSyncDot('ok');
+    poblarSanatorios();
+    renderDash();
+    if(state.currentPage==='contrataciones')renderTabla();
+  },err=>{setSyncDot('error');toast('Error de conexión','error');});
+}
+
+// ===== TOAST =====
+function toast(msg,type=''){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.className='toast show '+type;
+  setTimeout(()=>t.className='toast',3000);
+}
+
+// ===== HELPERS =====
+function fmt(n){return Number(n||0).toLocaleString('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0});}
+function tipoBadge(tipo){
+  if(!tipo)return'';
+  if(tipo==='Urgencia')return'<span class="tipo-urgencia">URGENCIA</span>';
+  if(tipo==='Emergencia')return'<span class="tipo-emergencia">EMERGENCIA</span>';
+  return'<span class="tipo-otro">'+tipo.toUpperCase()+'</span>';
+}
+function campoCell(val,placeholder='—'){
+  if(!val||val.trim()==='')return'<span class="campo-falta">'+placeholder+'</span>';
+  return'<span class="campo-ok">'+val+'</span>';
+}
+function fojaCell(val){
+  if(!val||val.trim()==='')return'<span class="campo-falta">No</span>';
+  return'<span class="campo-ok">✓ OK</span>';
+}
+function estadoCont(c){
+  const campos=['voucher','remito','foja','factura','doctor','certificado'];
+  const completos=campos.filter(k=>c[k]&&c[k].trim()!=='').length;
+  if(completos===campos.length)return'<span class="badge green">Completo</span>';
+  if(completos===0)return'<span class="badge red">Pendiente</span>';
+  return'<span class="badge amber">'+completos+'/'+campos.length+' campos</span>';
+}
+function getFiltroSanatorio(){
+  return document.getElementById('fil-sanatorio-g')?.value||'';
+}
+
+function poblarSanatorios(){
+  const sans=[...new Set(state.contrataciones.map(c=>c.sanatorio).filter(Boolean))].sort();
+  ['fil-sanatorio-g','fc-san'].forEach(id=>{
+    const sel=document.getElementById(id);
+    if(!sel)return;
+    const cur=sel.value;
+    sel.innerHTML='<option value="">'+(id==='fil-sanatorio-g'?'Todas las clínicas':'Todas las clínicas')+'</option>';
+    sans.forEach(s=>{const o=document.createElement('option');o.value=s;o.textContent=s;sel.appendChild(o);});
+    sel.value=cur;
+  });
+}
+
+// ===== NAV =====
+let currentPage='dashboard';
+function showPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  const pg=document.getElementById('page-'+id);
+  if(pg)pg.classList.add('active');
+  const nv=document.getElementById('nav-'+id);
+  if(nv)nv.classList.add('active');
+  document.getElementById('topbar-title').textContent=PAGE_TITLES[id]||id;
+  currentPage=id;
+  if(id==='dashboard')renderDash();
+  if(id==='contrataciones')renderTabla();
+}
+
+function filtroRapido(campo){
+  showPage('contrataciones');
+  document.getElementById('fc-campo').value=campo;
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('nav-'+campo)?.classList.add('active');
+  renderTabla();
+}
+
+// ===== DASHBOARD =====
+function renderDash(){
+  const san=getFiltroSanatorio();
+  const lista=state.contrataciones.filter(c=>!san||c.sanatorio===san);
+  const total=lista.length;
+  const sinFoja=lista.filter(c=>!c.foja||c.foja.trim()==='').length;
+  const sinVoucher=lista.filter(c=>!c.voucher||c.voucher.trim()==='').length;
+  const sinFactura=lista.filter(c=>!c.factura||c.factura.trim()==='').length;
+  const totalImporte=lista.reduce((s,c)=>s+(c.importe||0),0);
+
+  document.getElementById('dash-cards').innerHTML=
+    '<div class="card ab"><div class="lbl">Contrataciones</div><div class="val">'+total+'</div></div>'+
+    '<div class="card"><div class="lbl">Total adjudicado</div><div class="val" style="font-size:15px">'+fmt(totalImporte)+'</div></div>'+
+    '<div class="card ao"><div class="lbl">Sin foja</div><div class="val" style="color:var(--od-orange)">'+sinFoja+'</div><div class="sub"><button class="btn sm" onclick="filtroRapido(\'foja\')" style="margin-top:4px;font-size:11px">Ver</button></div></div>'+
+    '<div class="card ao"><div class="lbl">Sin voucher</div><div class="val" style="color:var(--od-orange)">'+sinVoucher+'</div><div class="sub"><button class="btn sm" onclick="filtroRapido(\'voucher\')" style="margin-top:4px;font-size:11px">Ver</button></div></div>'+
+    '<div class="card ao"><div class="lbl">Sin factura</div><div class="val" style="color:var(--od-orange)">'+sinFactura+'</div><div class="sub"><button class="btn sm" onclick="filtroRapido(\'factura\')" style="margin-top:4px;font-size:11px">Ver</button></div></div>';
+
+  // Últimas 20
+  const recientes=[...lista].sort((a,b)=>{
+    const na=parseInt(a.numero),nb=parseInt(b.numero);
+    return nb-na;
+  }).slice(0,20);
+
+  const tb=document.getElementById('dash-tbody');
+  if(!recientes.length){tb.innerHTML='<tr><td colspan="10"><div class="empty"><i class="ti ti-file-text"></i>Sin contrataciones</div></td></tr>';return;}
+  tb.innerHTML=recientes.map(c=>'<tr>'+
+    '<td><button class="btn sm" onclick="openEditar(\''+c.id+'\')" style="color:var(--od-blue);border-color:var(--od-blue);padding:2px 8px;font-size:11px">'+c.numero+'</button></td>'+
+    '<td>'+tipoBadge(c.tipo)+'</td>'+
+    '<td style="font-size:12px"><div>'+c.nombre+'</div><div style="color:var(--text-muted);font-size:11px">'+c.dni+'</div></td>'+
+    '<td style="font-size:12px;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+c.producto+'</td>'+
+    '<td style="text-align:right;font-weight:600">'+fmt(c.importe)+'</td>'+
+    '<td>'+campoCell(c.voucher,'Sin voucher')+'</td>'+
+    '<td>'+campoCell(c.remito,'Sin remito')+'</td>'+
+    '<td>'+fojaCell(c.foja)+'</td>'+
+    '<td style="font-size:12px">'+campoCell(c.factura,'Sin factura')+'</td>'+
+    '<td>'+estadoCont(c)+'</td>'+
+    '</tr>').join('');
+}
+
+// ===== TABLA CONTRATACIONES =====
+function renderTabla(){
+  const bus=(document.getElementById('fc-bus')?.value||'').toLowerCase();
+  const tipo=document.getElementById('fc-tipo')?.value||'';
+  const san=document.getElementById('fc-san')?.value||'';
+  const estado=document.getElementById('fc-estado')?.value||'';
+  const campo=document.getElementById('fc-campo')?.value||'';
+
+  let lista=[...state.contrataciones].filter(c=>{
+    if(tipo&&c.tipo!==tipo)return false;
+    if(san&&c.sanatorio!==san)return false;
+    if(bus&&!(
+      (c.nombre||'').toLowerCase().includes(bus)||
+      (c.numero||'').toLowerCase().includes(bus)||
+      (c.producto||'').toLowerCase().includes(bus)||
+      (c.dni||'').includes(bus)
+    ))return false;
+    if(campo&&(c[campo]||'').trim()!=='')return false;
+    if(estado==='completo'){
+      const campos=['voucher','remito','foja','factura','doctor','certificado'];
+      if(campos.some(k=>!c[k]||c[k].trim()===''))return false;
+    }
+    if(estado==='incompleto'){
+      const campos=['voucher','remito','foja','factura','doctor','certificado'];
+      if(campos.every(k=>c[k]&&c[k].trim()!==''))return false;
+    }
+    return true;
+  }).sort((a,b)=>parseInt(b.numero)-parseInt(a.numero));
+
+  document.getElementById('fc-count').textContent=lista.length+' contrataciones';
+
+  poblarSanatorios();
+
+  const tb=document.getElementById('cont-tbody');
+  if(!lista.length){tb.innerHTML='<tr><td colspan="14"><div class="empty"><i class="ti ti-search"></i>Sin resultados</div></td></tr>';return;}
+
+  tb.innerHTML=lista.map(c=>{
+    const tdS='padding:5px 8px;border-bottom:1px solid var(--border);vertical-align:middle;font-size:12px';
+    return'<tr onmouseover="this.style.background=\'var(--bg-hover)\'" onmouseout="this.style.background=\'\'">'+
+    '<td style="'+tdS+'"><button class="btn sm" onclick="openEditar(\''+c.id+'\')" style="color:var(--od-blue);border-color:var(--od-blue);padding:2px 8px;font-size:11px;margin-bottom:3px">'+c.numero+'</button><br>'+tipoBadge(c.tipo)+'<br><span style="font-size:10px;color:var(--text-muted)">'+c.fecha+'</span></td>'+
+    '<td style="'+tdS+'"><div style="font-weight:500">'+c.nombre+'</div><div style="color:var(--text-muted);font-size:11px">DNI '+c.dni+'</div></td>'+
+    '<td style="'+tdS+';max-width:200px">'+c.producto+'</td>'+
+    '<td style="'+tdS+';text-align:right;font-weight:600">'+fmt(c.importe)+'</td>'+
+    // Campos editables inline
+    '<td style="'+tdS+'"><input class="cell-edit" value="'+escHtml(c.voucher)+'" onchange="updateField(\''+c.id+'\',\'voucher\',this.value)" placeholder="voucher"></td>'+
+    '<td style="'+tdS+'"><input class="cell-edit" value="'+escHtml(c.doctor)+'" onchange="updateField(\''+c.id+'\',\'doctor\',this.value)" placeholder="doctor"></td>'+
+    '<td style="'+tdS+'"><input class="cell-edit" value="'+escHtml(c.sanatorio)+'" onchange="updateField(\''+c.id+'\',\'sanatorio\',this.value);poblarSanatorios()" placeholder="clínica"></td>'+
+    '<td style="'+tdS+'"><input class="cell-edit" value="'+escHtml(c.remito)+'" onchange="updateField(\''+c.id+'\',\'remito\',this.value)" placeholder="remito"></td>'+
+    '<td style="'+tdS+'"><input class="cell-edit" value="'+escHtml(c.certificado)+'" onchange="updateField(\''+c.id+'\',\'certificado\',this.value)" placeholder="firmado ok"></td>'+
+    '<td style="'+tdS+';text-align:center"><select class="cell-edit" onchange="updateField(\''+c.id+'\',\'foja\',this.value)" style="width:60px">'+
+      '<option value="" '+(c.foja?'':'selected')+'>No</option>'+
+      '<option value="ok" '+(c.foja==='ok'?'selected':'')+'>✓ OK</option>'+
+    '</select></td>'+
+    '<td style="'+tdS+'"><input class="cell-edit" value="'+escHtml(c.oc)+'" onchange="updateField(\''+c.id+'\',\'oc\',this.value)" placeholder="OC"></td>'+
+    '<td style="'+tdS+'"><input class="cell-edit" value="'+escHtml(c.factura)+'" onchange="updateField(\''+c.id+'\',\'factura\',this.value)" placeholder="factura"></td>'+
+    '<td style="'+tdS+'">'+estadoCont(c)+'</td>'+
+    '<td style="'+tdS+'"><button class="btn sm danger" onclick="openEditar(\''+c.id+'\')" title="Ver/Editar"><i class="ti ti-pencil"></i></button></td>'+
+    '</tr>';
+  }).join('');
+}
+
+function escHtml(s){return(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
+
+// ===== UPDATE INLINE =====
+async function updateField(id,campo,valor){
+  const c=state.contrataciones.find(x=>x.id===id);
+  if(!c)return;
+  c[campo]=valor;
+  await saveContratacion(c);
+  toast('Guardado ✓','success');
+  poblarSanatorios();
+}
+
+// ===== MODAL NUEVA / EDITAR =====
+function openNueva(){
+  state.currentId=null;
+  document.getElementById('modal-cont-title').textContent='Nueva contratación';
+  document.getElementById('mc-del-btn').style.display='none';
+  ['mc-num','mc-nombre','mc-dni','mc-producto','mc-voucher','mc-doctor','mc-sanatorio','mc-remito','mc-oc','mc-certificado','mc-factura','mc-notas'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('mc-importe').value='';
+  document.getElementById('mc-tipo').value='Urgencia';
+  document.getElementById('mc-foja').value='';
+  document.getElementById('mc-fecha').value=new Date().toISOString().slice(0,10);
+  openModal('modal-cont');
+}
+
+function openEditar(id){
+  const c=state.contrataciones.find(x=>x.id===id);if(!c)return;
+  state.currentId=id;
+  document.getElementById('modal-cont-title').textContent='Contratación N° '+c.numero;
+  document.getElementById('mc-del-btn').style.display='inline-flex';
+  document.getElementById('mc-num').value=c.numero||'';
+  document.getElementById('mc-tipo').value=c.tipo||'Urgencia';
+  document.getElementById('mc-nombre').value=c.nombre||'';
+  document.getElementById('mc-dni').value=c.dni||'';
+  document.getElementById('mc-importe').value=c.importe||'';
+  document.getElementById('mc-producto').value=c.producto||'';
+  document.getElementById('mc-voucher').value=c.voucher||'';
+  document.getElementById('mc-doctor').value=c.doctor||'';
+  document.getElementById('mc-sanatorio').value=c.sanatorio||'';
+  document.getElementById('mc-remito').value=c.remito||'';
+  document.getElementById('mc-oc').value=c.oc||'';
+  document.getElementById('mc-foja').value=c.foja||'';
+  document.getElementById('mc-certificado').value=c.certificado||'';
+  document.getElementById('mc-factura').value=c.factura||'';
+  document.getElementById('mc-notas').value=c.notas||'';
+  // Fecha
+  if(c.fecha){
+    const p=c.fecha.split('/');
+    if(p.length===3)document.getElementById('mc-fecha').value=p[2]+'-'+p[1]+'-'+p[0];
+    else document.getElementById('mc-fecha').value=c.fecha;
+  }
+  openModal('modal-cont');
+}
+
+async function guardarContratacion(){
+  const num=document.getElementById('mc-num').value.trim();
+  if(!num){alert('Ingresá el N° de contratación');return;}
+  const fechaVal=document.getElementById('mc-fecha').value;
+  let fechaFmt='';
+  if(fechaVal){const p=fechaVal.split('-');fechaFmt=p[2]+'/'+p[1]+'/'+p[0];}
+
+  const c={
+    id: state.currentId || ('c_'+num.replace(/[^a-zA-Z0-9]/g,'_')+'_'+Date.now()),
+    numero:num,tipo:document.getElementById('mc-tipo').value,
+    nombre:document.getElementById('mc-nombre').value.trim(),
+    dni:document.getElementById('mc-dni').value.trim(),
+    fecha:fechaFmt,
+    producto:document.getElementById('mc-producto').value.trim(),
+    importe:parseFloat(document.getElementById('mc-importe').value)||0,
+    voucher:document.getElementById('mc-voucher').value.trim(),
+    doctor:document.getElementById('mc-doctor').value.trim(),
+    sanatorio:document.getElementById('mc-sanatorio').value.trim(),
+    remito:document.getElementById('mc-remito').value.trim(),
+    oc:document.getElementById('mc-oc').value.trim(),
+    foja:document.getElementById('mc-foja').value,
+    certificado:document.getElementById('mc-certificado').value.trim(),
+    factura:document.getElementById('mc-factura').value.trim(),
+    notas:document.getElementById('mc-notas').value.trim(),
+  };
+  if(!state.currentId){
+    state.contrataciones.push(c);
+  } else {
+    const idx=state.contrataciones.findIndex(x=>x.id===state.currentId);
+    if(idx>=0)state.contrataciones[idx]=c;
+  }
+  await saveContratacion(c);
+  closeModal('modal-cont');
+  poblarSanatorios();
+  renderDash();
+  if(currentPage==='contrataciones')renderTabla();
+  toast((state.currentId?'Actualizado':'Guardado')+' ✓','success');
+}
+
+async function eliminarContratacion(){
+  if(!state.currentId)return;
+  const c=state.contrataciones.find(x=>x.id===state.currentId);
+  if(!confirm('¿Eliminar la contratación N° '+(c?.numero||'')+' de '+(c?.nombre||'')+' ?\nEsta acción no se puede deshacer.'))return;
+  await deleteContratacion(state.currentId);
+  state.contrataciones=state.contrataciones.filter(x=>x.id!==state.currentId);
+  closeModal('modal-cont');
+  poblarSanatorios();
+  renderDash();
+  if(currentPage==='contrataciones')renderTabla();
+  toast('Contratación eliminada','success');
+}
+
+// ===== IMPORTAR EXCEL =====
+async function importarExcel(){
+  const file=document.getElementById('imp-file').files[0];
+  if(!file){alert('Seleccioná un archivo');return;}
+  const el=document.getElementById('imp-result');
+  el.innerHTML='<span style="color:var(--text-muted)">Procesando...</span>';
+
+  const reader=new FileReader();
+  reader.onload=async function(e){
+    try{
+      // Parsear XLSX con SheetJS si está disponible, sino avisar
+      if(typeof XLSX==='undefined'){
+        el.innerHTML='<span style="color:var(--red)">Error: librería XLSX no disponible. Usá el prompt de Claude para generar el Excel correctamente.</span>';
+        return;
+      }
+      const data=new Uint8Array(e.target.result);
+      const wb=XLSX.read(data,{type:'array'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{defval:''});
+
+      if(!rows.length){el.innerHTML='<span style="color:var(--red)">El archivo está vacío o no tiene el formato correcto.</span>';return;}
+
+      let nuevas=0,omitidas=0;
+      const existentes=new Set(state.contrataciones.map(c=>c.numero.trim()));
+
+      for(const row of rows){
+        // Detectar columnas flexiblemente
+        const contKey=Object.keys(row).find(k=>k.toLowerCase().includes('contrataci'));
+        const nomKey=Object.keys(row).find(k=>k.toLowerCase().includes('nombre'));
+        const dniKey=Object.keys(row).find(k=>k.toLowerCase().includes('dni'));
+        const fechaKey=Object.keys(row).find(k=>k.toLowerCase().includes('fecha'));
+        const prodKey=Object.keys(row).find(k=>k.toLowerCase().includes('producto'));
+        const impKey=Object.keys(row).find(k=>k.toLowerCase().includes('total'));
+
+        const rawCont=String(row[contKey]||'').trim();
+        if(!rawCont)continue;
+
+        // Extraer número y tipo
+        const mNum=rawCont.match(/N°\s*([\d/]+)/i)||rawCont.match(/([\d]+\/[\d]+)/);
+        const numero=mNum?mNum[1].trim():rawCont;
+        const mTipo=rawCont.match(/urgencia/i)?'Urgencia':rawCont.match(/emergencia/i)?'Emergencia':'Otro';
+
+        if(existentes.has(numero)){omitidas++;continue;}
+
+        const fechaRaw=String(row[fechaKey]||'').trim();
+        const c={
+          id:'c_'+numero.replace(/[^a-zA-Z0-9]/g,'_')+'_'+Date.now()+'_'+nuevas,
+          numero,tipo:mTipo,
+          nombre:String(row[nomKey]||'').trim(),
+          dni:String(row[dniKey]||'').trim(),
+          fecha:fechaRaw,
+          producto:String(row[prodKey]||'').trim(),
+          importe:parseFloat(String(row[impKey]||'0').replace(/\./g,'').replace(',','.'))||0,
+          voucher:'',doctor:'',sanatorio:'',remito:'',oc:'',foja:'',certificado:'',factura:'',notas:''
+        };
+        state.contrataciones.push(c);
+        await saveContratacion(c);
+        existentes.add(numero);
+        nuevas++;
+      }
+      el.innerHTML='<span style="color:var(--green)">✓ '+nuevas+' contrataciones importadas. '+omitidas+' ya existían (omitidas).</span>';
+      poblarSanatorios();renderDash();
+      if(currentPage==='contrataciones')renderTabla();
+      toast(nuevas+' contrataciones importadas','success');
+    }catch(err){
+      el.innerHTML='<span style="color:var(--red)">Error al procesar: '+err.message+'</span>';
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ===== EXPORTAR EXCEL =====
+function exportarExcel(){
+  if(typeof XLSX==='undefined'){
+    // Fallback CSV
+    const BOM='﻿';
+    const cols=['numero','tipo','nombre','dni','fecha','producto','importe','voucher','doctor','sanatorio','remito','certificado','foja','oc','factura','notas'];
+    const hdrs=['N° Contratación','Tipo','Nombre','DNI','Fecha','Producto','Importe','Voucher','Doctor','Clínica','Remito','Certificado','Foja','OC','Factura','Notas'];
+    let csv=BOM+hdrs.map(h=>'"'+h+'"').join(';')+'\r\n';
+    state.contrataciones.forEach(c=>{
+      csv+=cols.map(k=>typeof c[k]==='number'?c[k]:'"'+(c[k]||'').replace(/"/g,'""')+'"').join(';')+'\r\n';
+    });
+    const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download='contrataciones-ips-'+new Date().toISOString().slice(0,10)+'.csv';
+    a.click();
+    toast('CSV descargado','success');
+    return;
+  }
+  const cols=['numero','tipo','nombre','dni','fecha','producto','importe','voucher','doctor','sanatorio','remito','certificado','foja','oc','factura','notas'];
+  const hdrs=['N° Contratación','Tipo','Nombre','DNI','Fecha','Producto','Importe','Voucher','Doctor','Clínica','Remito','Certificado','Foja','OC','Factura','Notas'];
+  const data=[hdrs,...state.contrataciones.map(c=>cols.map(k=>c[k]||''))];
+  const ws=XLSX.utils.aoa_to_sheet(data);
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Contrataciones IPS');
+  XLSX.writeFile(wb,'contrataciones-ips-'+new Date().toISOString().slice(0,10)+'.xlsx');
+  toast('Excel descargado','success');
+}
+
+// ===== PROMPT =====
+function copiarPrompt(){
+  const txt=document.getElementById('prompt-text').textContent;
+  navigator.clipboard.writeText(txt).then(()=>toast('Prompt copiado ✓','success')).catch(()=>toast('Copiá el texto manualmente','error'));
+}
+
+// ===== MODAL =====
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+
+// ===== INIT =====
+// Cargar SheetJS dinámicamente
+const s=document.createElement('script');
+s.src='https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js';
+document.head.appendChild(s);
+
+initFirebase();
+</script>
+</body>
+</html>
