@@ -190,19 +190,19 @@ tr:hover td{background:var(--bg-hover)}
   <div class="table-wrap" style="overflow-x:auto">
   <table style="min-width:1400px">
     <thead><tr>
-      <th style="min-width:120px">N° / Tipo</th>
-      <th style="min-width:60px">Fecha</th>
+      <th style="min-width:140px">N° / Tipo / Fecha</th>
       <th style="min-width:160px">Afiliado / DNI</th>
       <th style="min-width:200px">Producto</th>
       <th style="min-width:90px;text-align:right">Importe</th>
-      <th style="min-width:120px">Voucher</th>
+      <th style="min-width:100px">Voucher</th>
       <th style="min-width:100px">Doctor</th>
       <th style="min-width:120px">Clínica / Sanatorio</th>
       <th style="min-width:100px">Remito</th>
-      <th style="min-width:70px">Certificado</th>
+      <th style="min-width:120px">Cert. Implantes Firmado</th>
       <th style="min-width:60px">Foja</th>
       <th style="min-width:100px">OC</th>
       <th style="min-width:130px">Factura</th>
+      <th style="min-width:70px">Estado</th>
       <th style="min-width:40px"></th>
     </tr></thead>
     <tbody id="cont-tbody"></tbody>
@@ -282,7 +282,7 @@ Reglas:
     <div class="form-row"><label class="form-label">Foja</label><input id="mc-foja" placeholder="N° foja o OK"></div>
   </div>
   <div class="form-grid">
-    <div class="form-row"><label class="form-label">Certificado de implantes</label><input id="mc-certificado" placeholder="Firmado OK / vacío si no aplica"></div>
+    <div class="form-row"><label class="form-label">Certificado de Implantes FIRMADO</label><input id="mc-certificado" placeholder="Firmado OK / vacío si no aplica"></div>
     <div class="form-row"><label class="form-label">Factura</label><input id="mc-factura" placeholder="N° factura"></div>
     <div class="form-row"><label class="form-label">N° Expediente IPS</label><input id="mc-expediente" placeholder="74-XXXXX/2026" list="dl-exp"><datalist id="dl-exp"></datalist></div>
   </div>
@@ -325,14 +325,26 @@ async function deleteContratacion(id){
   await ref.child(key).remove();
 }
 
+function factura_valida(f){return (f||'').trim()!==''&&!['Facturar','Falta OC','Falta','nan'].includes((f||'').trim());}
+function esCerrado(c){return factura_valida(c.factura);}
+
 function initFirebase(){
   setSyncDot('syncing');
   ref.on('value',snap=>{
     const data=snap.val();
     if(data){
-      state.contrataciones=Object.values(data);
+      state.contrataciones=Object.values(data).map(c=>{
+        // Calcular cerrado dinámicamente basado en factura
+        c.cerrado=esCerrado(c);
+        // Si está cerrado y le faltan campos, completarlos localmente para visualización
+        if(c.cerrado){
+          if(!c.voucher)c.voucher='OK';
+          if(!c.foja)c.foja='OK';
+          if(!c.certificado)c.certificado='OK';
+        }
+        return c;
+      });
     } else if(!state.loaded){
-      // Primera vez: cargar seed
       SEED_DATA.forEach(c=>saveContratacion(c));
       state.contrataciones=JSON.parse(JSON.stringify(SEED_DATA));
     }
@@ -368,7 +380,7 @@ function fojaCell(val){
   return'<span class="campo-ok">✓ OK</span>';
 }
 function estadoCont(c){
-  if(c.cerrado)return'<span class="badge" style="background:#e0f2fe;color:#0369a1">✓ Cerrado</span>';
+  if(esCerrado(c))return'<span class="badge" style="background:#e0f2fe;color:#0369a1;white-space:nowrap">✓ Cerrado</span>';
   const campos=['voucher','remito','foja','factura','doctor','certificado'];
   const completos=campos.filter(k=>c[k]&&c[k].trim()!=='').length;
   if(completos===campos.length)return'<span class="badge green">Completo</span>';
@@ -425,7 +437,7 @@ function filtroRapido(campo){
 function renderDash(){
   const san=getFiltroSanatorio();
   const lista=state.contrataciones.filter(c=>!san||c.sanatorio===san);
-  const abiertos=lista.filter(c=>!c.cerrado);
+  const abiertos=lista.filter(c=>!esCerrado(c));
   const total=lista.length;
   const sinFoja=abiertos.filter(c=>!c.foja||c.foja.trim()==='').length;
   const sinVoucher=abiertos.filter(c=>!c.voucher||c.voucher.trim()==='').length;
@@ -478,7 +490,7 @@ function renderTabla(){
       (c.producto||'').toLowerCase().includes(bus)||
       (c.dni||'').includes(bus)
     ))return false;
-    if(campo){if(c.cerrado)return false; if((c[campo]||'').trim()!=='')return false;}
+    if(campo){if(esCerrado(c))return false; if((c[campo]||'').trim()!=='')return false;}
     if(estado==='completo'){
       const campos=['voucher','remito','foja','factura','doctor','certificado'];
       if(campos.some(k=>!c[k]||c[k].trim()===''))return false;
