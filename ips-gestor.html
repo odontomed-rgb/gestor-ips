@@ -192,7 +192,7 @@ tr:hover td{background:var(--bg-hover)}
     <thead><tr>
       <th style="min-width:140px">N° / Tipo / Fecha</th>
       <th style="min-width:160px">Afiliado / DNI</th>
-      <th style="min-width:200px">Producto</th>
+      <th style="min-width:200px">Producto / Descripción</th>
       <th style="min-width:90px;text-align:right">Importe</th>
       <th style="min-width:100px">Voucher</th>
       <th style="min-width:100px">Doctor</th>
@@ -237,12 +237,15 @@ tr:hover td{background:var(--bg-hover)}
 3. DNI
 4. Fecha de Contratación
 5. Producto Adjudicado
-6. Importe Producto
-7. Importe Total Adjudicado
+6. Descripción / Marca
+7. Importe Producto
+8. Importe Total Adjudicado
 
 Reglas:
 - Si una contratación tiene múltiples productos, poné cada producto en una fila separada, repitiendo los datos del afiliado.
 - En "N° Contratación / Tipo" usá el formato: Contratación Abreviada de [Tipo] N° [número]/[año]
+- En "Producto Adjudicado" poné el nombre del producto tal como figura en el sistema.
+- En "Descripción / Marca" poné la descripción o marca que figura en la columna "Producto" de la tabla de cotizaciones (ej: "Marca: Tontarra Origen: Importado"). Si no hay descripción, dejá la celda vacía.
 - En "Importe Producto" poné el precio unitario de ese ítem.
 - En "Importe Total Adjudicado" poné el total de la contratación (igual en todas las filas de la misma contratación).
 - Fechas en formato DD/MM/AAAA.
@@ -272,6 +275,7 @@ Reglas:
     <div class="form-row"><label class="form-label">Importe total</label><input type="number" id="mc-importe" placeholder="0"></div>
   </div>
   <div class="form-row"><label class="form-label">Producto(s) adjudicado(s)</label><textarea id="mc-producto" rows="2" placeholder="Descripción del producto"></textarea></div>
+  <div class="form-row"><label class="form-label">Descripción / Marca <span style="font-size:11px;color:var(--text-muted)">(marca, modelo, origen — del campo de cotización IPSS)</span></label><input id="mc-descripcion" placeholder="ej: Marca: Tontarra Origen: Importado"></div>
   <div class="sec-title">Documentación</div>
   <div class="form-grid">
     <div class="form-row"><label class="form-label">Voucher</label><select id="mc-voucher"><option value="">Sin voucher</option><option value="Sí">Sí</option><option value="Por mail">Por mail</option></select></div>
@@ -553,7 +557,7 @@ function openNueva(){
   document.getElementById('modal-cont-title').textContent='Nueva contratación';
   document.getElementById('mc-del-btn').style.display='none';
   document.getElementById('mc-cert-btn').style.display='none';
-  ['mc-num','mc-nombre','mc-dni','mc-producto','mc-doctor','mc-sanatorio','mc-remito','mc-oc','mc-certificado','mc-factura','mc-notas','mc-expediente'].forEach(id=>document.getElementById(id).value='');
+  ['mc-num','mc-nombre','mc-dni','mc-producto','mc-descripcion','mc-doctor','mc-sanatorio','mc-remito','mc-oc','mc-certificado','mc-factura','mc-notas','mc-expediente'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('mc-voucher').value='';
   document.getElementById('mc-importe').value='';
   document.getElementById('mc-tipo').value='Urgencia';
@@ -574,6 +578,7 @@ function openEditar(id){
   document.getElementById('mc-dni').value=c.dni||'';
   document.getElementById('mc-importe').value=c.importe||'';
   document.getElementById('mc-producto').value=c.producto||'';
+  document.getElementById('mc-descripcion').value=c.descripcion||'';
   const vEl=document.getElementById('mc-voucher'); if(vEl.tagName==='SELECT'){const vOpts=['','Sí','Por mail']; vEl.value=vOpts.includes(c.voucher)?c.voucher:'';} else {vEl.value=c.voucher||'';}
   document.getElementById('mc-doctor').value=c.doctor||'';
   document.getElementById('mc-sanatorio').value=c.sanatorio||'';
@@ -607,6 +612,7 @@ async function guardarContratacion(){
     dni:document.getElementById('mc-dni').value.trim(),
     fecha:fechaFmt,
     producto:document.getElementById('mc-producto').value.trim(),
+    descripcion:document.getElementById('mc-descripcion').value.trim(),
     importe:parseFloat(document.getElementById('mc-importe').value)||0,
     voucher:document.getElementById('mc-voucher').value.trim(),
     doctor:document.getElementById('mc-doctor').value.trim(),
@@ -678,6 +684,7 @@ async function importarExcel(){
         const dniKey=Object.keys(row).find(k=>k.toLowerCase().includes('dni'));
         const fechaKey=Object.keys(row).find(k=>k.toLowerCase().includes('fecha'));
         const prodKey=Object.keys(row).find(k=>k.toLowerCase().includes('producto'));
+        const descKey=Object.keys(row).find(k=>k.toLowerCase().includes('descripci') || k.toLowerCase().includes('marca'));
         const impKey=Object.keys(row).find(k=>k.toLowerCase().includes('total'));
 
         const rawCont=String(row[contKey]||'').trim();
@@ -698,6 +705,7 @@ async function importarExcel(){
           dni:String(row[dniKey]||'').trim(),
           fecha:fechaRaw,
           producto:String(row[prodKey]||'').trim(),
+          descripcion:descKey ? String(row[descKey]||'').trim() : '',
           importe:parseFloat(String(row[impKey]||'0').replace(/\./g,'').replace(',','.'))||0,
           voucher:'',doctor:'',sanatorio:'',remito:'',oc:'',foja:'',certificado:'',factura:'',notas:''
         };
@@ -722,8 +730,8 @@ function exportarExcel(){
   if(typeof XLSX==='undefined'){
     // Fallback CSV
     const BOM='﻿';
-    const cols=['numero','tipo','nombre','dni','fecha','producto','importe','voucher','doctor','sanatorio','remito','certificado','foja','oc','factura','notas'];
-    const hdrs=['N° Contratación','Tipo','Nombre','DNI','Fecha','Producto','Importe','Voucher','Doctor','Clínica','Remito','Certificado','Foja','OC','Factura','Notas'];
+    const cols=['numero','tipo','nombre','dni','fecha','producto','descripcion','importe','voucher','doctor','sanatorio','remito','certificado','foja','oc','factura','notas'];
+    const hdrs=['N° Contratación','Tipo','Nombre','DNI','Fecha','Producto','Descripción/Marca','Importe','Voucher','Doctor','Clínica','Remito','Certificado','Foja','OC','Factura','Notas'];
     let csv=BOM+hdrs.map(h=>'"'+h+'"').join(';')+'\r\n';
     state.contrataciones.forEach(c=>{
       csv+=cols.map(k=>typeof c[k]==='number'?c[k]:'"'+(c[k]||'').replace(/"/g,'""')+'"').join(';')+'\r\n';
@@ -736,8 +744,8 @@ function exportarExcel(){
     toast('CSV descargado','success');
     return;
   }
-  const cols=['numero','tipo','nombre','dni','fecha','producto','importe','voucher','doctor','sanatorio','remito','certificado','foja','oc','factura','notas'];
-  const hdrs=['N° Contratación','Tipo','Nombre','DNI','Fecha','Producto','Importe','Voucher','Doctor','Clínica','Remito','Certificado','Foja','OC','Factura','Notas'];
+  const cols=['numero','tipo','nombre','dni','fecha','producto','descripcion','importe','voucher','doctor','sanatorio','remito','certificado','foja','oc','factura','notas'];
+  const hdrs=['N° Contratación','Tipo','Nombre','DNI','Fecha','Producto','Descripción/Marca','Importe','Voucher','Doctor','Clínica','Remito','Certificado','Foja','OC','Factura','Notas'];
   const data=[hdrs,...state.contrataciones.map(c=>cols.map(k=>c[k]||''))];
   const ws=XLSX.utils.aoa_to_sheet(data);
   const wb=XLSX.utils.book_new();
@@ -770,7 +778,9 @@ function imprimirCertificado(){
   const fechaHoy = 'Salta, ' + hoy.getDate() + ' de ' + meses[hoy.getMonth()] + ' de ' + hoy.getFullYear();
 
   const productos = (c.producto||'').split('\n').map(p=>p.trim()).filter(Boolean);
-  const listaItems = productos.map(p=>'<li style="margin:5px 0;font-size:14px">'+p+'</li>').join('');
+  const listaItems = productos.length > 1
+    ? productos.map(p=>'<li style="margin:5px 0;font-size:14px">'+p+'</li>').join('')
+    : '<li style="margin:5px 0;font-size:14px">'+( productos[0]||'' )+(c.descripcion?' <span style="color:#555;font-size:12px">('+c.descripcion+')</span>':'')+'</li>';
 
   const expteRef = c.expediente ? ' Expte. N&deg; <strong>'+c.expediente+'</strong>' : '';
   const expteParr = c.expediente ? ' Expte N&deg;: <strong>'+c.expediente+'</strong>' : '';
