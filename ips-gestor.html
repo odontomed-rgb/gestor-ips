@@ -95,17 +95,22 @@ tr:hover td{background:var(--bg-hover)}
 .campo-falta{color:var(--red);font-size:11px;font-style:italic}
 .campo-parcial{color:var(--amber)}
 /* INLINE EDIT */
-.cell-edit{border:none;background:transparent;font-size:13px;color:var(--text);width:100%;cursor:pointer;padding:2px 4px;border-radius:4px}
+.cell-edit{border:none;background:transparent;font-size:11px;color:var(--text);width:100%;cursor:pointer;padding:1px 3px;border-radius:3px}
 .cell-edit:hover{background:var(--od-blue-light)}
 .cell-edit:focus{outline:1px solid var(--od-blue);background:white;cursor:text}
 /* PROMPT BOX */
 .prompt-box{background:#1E293B;border-radius:var(--r);padding:1rem 1.25rem;font-family:monospace;font-size:12px;color:#E2E8F0;white-space:pre-wrap;line-height:1.6;position:relative}
 .copy-btn{position:absolute;top:8px;right:8px}
 /* TIPO CHIP */
-.tipo-urgencia{background:#FEF3C7;color:#92400E;font-size:10px;padding:1px 6px;border-radius:4px;font-weight:600}
-.tipo-emergencia{background:#FEE2E2;color:#7F1D1D;font-size:10px;padding:1px 6px;border-radius:4px;font-weight:600}
+.tipo-urgencia{background:#FEF3C7;color:#92400E;font-size:9px;padding:1px 4px;border-radius:3px;font-weight:600}
+.tipo-emergencia{background:#FEE2E2;color:#7F1D1D;font-size:9px;padding:1px 4px;border-radius:3px;font-weight:600}
 .tipo-otro{background:#F3F4F6;color:#374151;font-size:10px;padding:1px 6px;border-radius:4px;font-weight:600}
 .empty{text-align:center;padding:3rem;color:var(--text-muted)}
+.scroll-wrap{overflow-x:scroll;width:100%;padding-bottom:4px}
+.scroll-wrap::-webkit-scrollbar{height:6px}
+.scroll-wrap::-webkit-scrollbar-track{background:#f1f1f1;border-radius:3px}
+.scroll-wrap::-webkit-scrollbar-thumb{background:#bbb;border-radius:3px}
+.scroll-wrap::-webkit-scrollbar-thumb:hover{background:#999}
 .empty i{font-size:32px;display:block;margin-bottom:8px;opacity:.3;color:var(--od-blue)}
 </style>
 </head>
@@ -187,27 +192,27 @@ tr:hover td{background:var(--bg-hover)}
     </select>
     <span id="fc-count" style="font-size:12px;color:var(--text-muted);margin-left:4px"></span>
   </div>
-  <div class="table-wrap" style="overflow-x:auto">
-  <table style="min-width:1400px">
+  <div class="scroll-wrap"><div class="table-wrap" style="overflow:visible">
+  <table style="min-width:1050px;font-size:11px">
     <thead><tr>
-      <th style="min-width:140px">N° / Tipo / Fecha</th>
-      <th style="min-width:160px">Afiliado / DNI</th>
-      <th style="min-width:200px">Producto / Descripción</th>
-      <th style="min-width:90px;text-align:right">Importe</th>
-      <th style="min-width:100px">Voucher</th>
-      <th style="min-width:100px">Doctor</th>
-      <th style="min-width:120px">Clínica / Sanatorio</th>
-      <th style="min-width:100px">Remito</th>
-      <th style="min-width:120px">Cert. Implantes Firmado</th>
-      <th style="min-width:60px">Foja</th>
-      <th style="min-width:100px">OC</th>
-      <th style="min-width:130px">Factura</th>
-      <th style="min-width:70px">Estado</th>
-      <th style="min-width:40px"></th>
+      <th style="min-width:95px">N° / Tipo</th>
+      <th style="min-width:110px">Afiliado</th>
+      <th style="min-width:150px">Producto</th>
+      <th style="min-width:65px;text-align:right">Importe</th>
+      <th style="min-width:75px">Voucher</th>
+      <th style="min-width:85px">Doctor</th>
+      <th style="min-width:85px">Clínica</th>
+      <th style="min-width:75px">Remito</th>
+      <th style="min-width:55px">Cert.</th>
+      <th style="min-width:45px">Foja</th>
+      <th style="min-width:65px">OC</th>
+      <th style="min-width:85px">Factura</th>
+      <th style="min-width:55px">Estado</th>
+      <th style="min-width:28px"></th>
     </tr></thead>
     <tbody id="cont-tbody"></tbody>
   </table>
-  </div>
+  </div></div>
 </div>
 
 <!-- IMPORTAR -->
@@ -516,7 +521,7 @@ function renderTabla(){
   if(!lista.length){tb.innerHTML='<tr><td colspan="14"><div class="empty"><i class="ti ti-search"></i>Sin resultados</div></td></tr>';return;}
 
   tb.innerHTML=lista.map(c=>{
-    const tdS='padding:5px 8px;border-bottom:1px solid var(--border);vertical-align:middle;font-size:12px';
+    const tdS='padding:3px 4px;border-bottom:1px solid var(--border);vertical-align:middle;font-size:11px';
     return'<tr onmouseover="this.style.background=\'var(--bg-hover)\'" onmouseout="this.style.background=\'\'">'+
     '<td style="'+tdS+'"><button class="btn sm" onclick="openEditar(\''+c.id+'\')" style="color:var(--od-blue);border-color:var(--od-blue);padding:2px 8px;font-size:11px;margin-bottom:3px">'+c.numero+'</button><br>'+tipoBadge(c.tipo)+'<br><span style="font-size:10px;color:var(--text-muted)">'+c.fecha+'</span></td>'+
     '<td style="'+tdS+'"><div style="font-weight:500">'+c.nombre+'</div><div style="color:var(--text-muted);font-size:11px">DNI '+c.dni+'</div></td>'+
